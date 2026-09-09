@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --color-noir-950: #070707;
+  --color-noir-900: #0e0e0d;
+  --color-noir-850: #141413;
+  --color-noir-800: #1b1a18;
+  --color-noir-700: #272522;
+  --color-noir-600: #383531;
+  --color-noir-500: #55504a;
+  --color-noir-400: #827c73;
+  --color-noir-300: #a9a296;
+
+  --color-ivory-50: #ffffff;
+  --color-ivory-100: #fdfbf7;
+  --color-ivory-200: #f7f4ec;
+  --color-ivory-300: #ede8dc;
+  --color-ivory-400: #ded6c4;
+
+  --color-gold-200: #f6ebd0;
+  --color-gold-300: #ebd39c;
+  --color-gold-400: #dcba6d;
+  --color-gold-500: #c5a049;
+  --color-gold-600: #a48032;
+  --color-gold-700: #7d6022;
+
+  --font-serif: "Cinzel", "Playfair Display", Georgia, serif;
+  --font-display: "Playfair Display", "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    font-family: var(--font-sans);
+    background-color: var(--color-noir-950);
+    color: var(--color-ivory-100);
+  }
+
+  ::selection {
+    background-color: rgba(197, 160, 73, 0.3);
+    color: #ffffff;
+  }
+
+  /* Custom subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0e0e0d;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #272522;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #c5a049;
+  }
+}
+
+/* Luxury accent utilities */
+.gold-gradient-text {
+  background: linear-gradient(135deg, #f6ebd0 0%, #dcba6d 50%, #a48032 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-border {
+  border-image: linear-gradient(135deg, #c5a049 0%, #383531 60%, rgba(197, 160, 73, 0.2) 100%) 1;
+}
+
+.subtle-gold-glow {
+  box-shadow: 0 0 35px -10px rgba(197, 160, 73, 0.15);
+}
+
+.luxury-glass {
+  background: rgba(20, 20, 19, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.luxury-glass-light {
+  background: rgba(253, 251, 247, 0.03);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(220, 186, 109, 0.15);
+}
+
+.font-serif-title {
+  font-family: var(--font-serif);
+  letter-spacing: 0.04em;
+}
+
+.font-editorial {
+  font-family: var(--font-display);
+}

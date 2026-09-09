@@ -1,0 +1,142 @@
+---
+import { CATEGORIES } from '../data/collectibles';
+---
+
+<footer class="bg-noir-950 border-t border-noir-800 text-ivory-300/80 pt-16 pb-12 transition-colors">
+  <!-- Trust Guarantees Strip -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 border-b border-noir-800/80">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div class="flex items-start gap-4">
+        <div class="p-2.5 rounded-sm bg-noir-900 border border-gold-500/20 text-gold-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div>
+          <h4 class="font-serif text-sm tracking-wider uppercase text-ivory-100 mb-1">Authenticated Provenance</h4>
+          <p class="text-xs text-noir-400 leading-relaxed">Every piece is verified against historical archives, catalog raisonnés, and maker registries.</p>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-4">
+        <div class="p-2.5 rounded-sm bg-noir-900 border border-gold-500/20 text-gold-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <div>
+          <h4 class="font-serif text-sm tracking-wider uppercase text-ivory-100 mb-1">Private Escrow Settlement</h4>
+          <p class="text-xs text-noir-400 leading-relaxed">Funds remain locked in institutional escrow until white-glove inspection is confirmed.</p>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-4">
+        <div class="p-2.5 rounded-sm bg-noir-900 border border-gold-500/20 text-gold-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h4 class="font-serif text-sm tracking-wider uppercase text-ivory-100 mb-1">Armored Transit Courier</h4>
+          <p class="text-xs text-noir-400 leading-relaxed">Discreet insured transport worldwide with climatized specialized art handlers.</p>
+        </div>
+      </div>
+
+      <div class="flex items-start gap-4">
+        <div class="p-2.5 rounded-sm bg-noir-900 border border-gold-500/20 text-gold-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        </div>
+        <div>
+          <h4 class="font-serif text-sm tracking-wider uppercase text-ivory-100 mb-1">Collector Confidentiality</h4>
+          <p class="text-xs text-noir-400 leading-relaxed">Strict non-disclosure options for private treaty transfers and high-value acquisitions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Footer Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-12">
+      <!-- Col 1: Brand & Philosophy -->
+      <div class="md:col-span-4 space-y-4">
+        <span class="font-serif text-2xl tracking-[0.25em] font-light text-ivory-100 block">
+          RARIVELLE
+        </span>
+        <p class="text-xs text-noir-400 leading-relaxed max-w-sm">
+          A digital salon for connoisseurs and custodians of extraordinary objects. Connecting discerning private collectors with museum-grade artifacts, timepieces, historic manuscripts, and rare antiquities.
+        </p>
+        <div class="pt-2 text-[11px] uppercase tracking-widest text-gold-400/80">
+          Geneva · London · New York · Tokyo
+        </div>
+      </div>
+
+      <!-- Col 2: Categories -->
+      <div class="md:col-span-3 space-y-3">
+        <h4 class="font-serif text-xs uppercase tracking-[0.2em] text-ivory-100 font-semibold mb-3">Departments</h4>
+        <ul class="space-y-2 text-xs">
+          {CATEGORIES.slice(0, 5).map(cat => (
+            <li>
+              <a href={`/discover?category=${encodeURIComponent(cat.name)}`} class="text-noir-400 hover:text-gold-400 transition-colors">
+                {cat.name}
+              </a>
+            </li>
+          ))}
+          <li>
+            <a href="/discover" class="text-gold-400/80 hover:text-gold-300 font-medium">
+              View All Departments &rarr;
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Col 3: Collector Services -->
+      <div class="md:col-span-2 space-y-3">
+        <h4 class="font-serif text-xs uppercase tracking-[0.2em] text-ivory-100 font-semibold mb-3">Services</h4>
+        <ul class="space-y-2 text-xs">
+          <li><a href="/sell" class="text-noir-400 hover:text-gold-400 transition-colors">Consign a Piece</a></li>
+          <li><a href="/discover?filter=rare" class="text-noir-400 hover:text-gold-400 transition-colors">Rare Finds</a></li>
+          <li><a href="/wishlist" class="text-noir-400 hover:text-gold-400 transition-colors">Private Wishlist</a></li>
+          <li><a href="/account" class="text-noir-400 hover:text-gold-400 transition-colors">The Vault (Account)</a></li>
+          <li><span class="text-noir-500 cursor-not-allowed">Private Treaty (Coming)</span></li>
+        </ul>
+      </div>
+
+      <!-- Col 4: Dispatch Newsletter -->
+      <div class="md:col-span-3 space-y-3">
+        <h4 class="font-serif text-xs uppercase tracking-[0.2em] text-ivory-100 font-semibold mb-2">The Collector's Dispatch</h4>
+        <p class="text-xs text-noir-400">Receive private notices on newly unsealed historic collections and rare drop releases.</p>
+        <form onsubmit="event.preventDefault(); alert('Thank you for subscribing to The Collector’s Dispatch.');" class="pt-2 space-y-2">
+          <div class="relative">
+            <input 
+              type="email" 
+              placeholder="curator@collection.org" 
+              required
+              class="w-full bg-noir-900 border border-noir-700 px-3.5 py-2 text-xs text-ivory-100 placeholder-noir-500 focus:outline-none focus:border-gold-500 transition-colors"
+            />
+            <button 
+              type="submit" 
+              class="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-gold-500 text-noir-950 text-[10px] uppercase tracking-wider font-semibold hover:bg-gold-400 transition-colors"
+            >
+              Join
+            </button>
+          </div>
+          <span class="text-[10px] text-noir-500 block">Strictly confidential. No commercial spam.</span>
+        </form>
+      </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="mt-16 pt-8 border-t border-noir-900 flex flex-col sm:flex-row items-center justify-between text-xs text-noir-500 gap-4">
+      <div>
+        &copy; {new Date().getFullYear()} RARIVELLE S.A. All rights reserved. Exceptional Objects of Art & History.
+      </div>
+      <div class="flex gap-6 text-[11px] uppercase tracking-wider">
+        <a href="#" class="hover:text-gold-400 transition-colors">Provenance Standards</a>
+        <a href="#" class="hover:text-gold-400 transition-colors">Escrow Terms</a>
+        <a href="#" class="hover:text-gold-400 transition-colors">Privacy</a>
+      </div>
+    </div>
+  </div>
+</footer>

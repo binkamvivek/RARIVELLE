@@ -1,23 +1,146 @@
+---
+import '../styles/global.css';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { 
+  title = 'RARIVELLE — Rare Collectibles & Historic Masterpieces',
+  description = 'Discover what time couldn’t replace. The premier luxury marketplace for rare horology, certified numismatics, signed first editions, and museum-grade antiquities.'
+} = Astro.props;
+
+const currentPath = Astro.url.pathname;
+---
+
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
-	</head>
-	<body>
-		<slot />
-	</body>
-</html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    
+    <title>{title}</title>
+    <meta name="description" content={description} />
 
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>
+    <!-- Google Fonts for Editorial Luxury Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link 
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" 
+      rel="stylesheet" 
+    />
+  </head>
+  <body class="min-h-screen flex flex-col bg-noir-950 text-ivory-100 antialiased selection:bg-gold-500/20 selection:text-white">
+    <Navbar currentPath={currentPath} />
+
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <Footer />
+
+    <!-- Toast Notification Container -->
+    <div 
+      id="global-toast" 
+      class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 ease-out bg-noir-900 border border-gold-500/40 text-ivory-100 shadow-2xl px-5 py-3.5 flex items-center gap-3 backdrop-blur-lg"
+    >
+      <div id="toast-icon" class="text-gold-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+      <div class="text-xs tracking-wider uppercase font-serif" id="toast-message">
+        Action completed
+      </div>
+    </div>
+
+    <script>
+      // Global Wishlist Management & Toast Trigger
+      function showToast(message: string) {
+        const toast = document.getElementById('global-toast');
+        const msgEl = document.getElementById('toast-message');
+        if (!toast || !msgEl) return;
+
+        msgEl.textContent = message;
+        toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+        toast.classList.add('translate-y-0', 'opacity-100');
+
+        setTimeout(() => {
+          toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+          toast.classList.remove('translate-y-0', 'opacity-100');
+        }, 3000);
+      }
+
+      // Sync heart icons across the page
+      function syncHeartButtons() {
+        try {
+          const raw = localStorage.getItem('rarivelle_wishlist');
+          const wishlist = raw ? JSON.parse(raw) : [];
+
+          document.querySelectorAll<HTMLElement>('[data-wishlist-btn]').forEach(btn => {
+            const id = btn.getAttribute('data-wishlist-btn');
+            const icon = btn.querySelector('.heart-icon');
+            if (id && icon) {
+              if (wishlist.includes(id)) {
+                icon.setAttribute('fill', 'currentColor');
+                btn.classList.add('text-gold-400', 'border-gold-500');
+                btn.classList.remove('text-ivory-300');
+              } else {
+                icon.setAttribute('fill', 'none');
+                btn.classList.remove('text-gold-400', 'border-gold-500');
+                btn.classList.add('text-ivory-300');
+              }
+            }
+          });
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+
+      // Delegate click handler for wishlist buttons
+      document.addEventListener('click', (e) => {
+        const target = (e.target as HTMLElement).closest<HTMLElement>('[data-wishlist-btn]');
+        if (!target) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const id = target.getAttribute('data-wishlist-btn');
+        const title = target.getAttribute('data-item-title') || 'Piece';
+        if (!id) return;
+
+        try {
+          const raw = localStorage.getItem('rarivelle_wishlist');
+          let list: string[] = raw ? JSON.parse(raw) : ['rv-101', 'rv-104'];
+          const index = list.indexOf(id);
+          let isAdded = false;
+
+          if (index > -1) {
+            list.splice(index, 1);
+            showToast(`Removed from Private Wishlist`);
+          } else {
+            list.push(id);
+            isAdded = true;
+            showToast(`Saved to Private Wishlist`);
+          }
+
+          localStorage.setItem('rarivelle_wishlist', JSON.stringify(list));
+          window.dispatchEvent(new CustomEvent('rarivelle:wishlist-updated', { detail: { id, added: isAdded, count: list.length } }));
+          syncHeartButtons();
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      // Listen to wishlist updates
+      window.addEventListener('rarivelle:wishlist-updated', syncHeartButtons);
+      document.addEventListener('DOMContentLoaded', syncHeartButtons);
+      syncHeartButtons();
+    </script>
+  </body>
+</html>

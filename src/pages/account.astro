@@ -1,0 +1,257 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+  title="The Vault | Collector Dashboard & Portfolio | RARIVELLE"
+  description="Manage your active consignments, acquired artifacts, and institutional verification status on RARIVELLE."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Collector Header Banner -->
+    <div class="bg-noir-900 border border-noir-800 p-8 sm:p-10 mb-12 relative overflow-hidden">
+      <div class="absolute -right-16 -top-16 w-64 h-64 bg-gold-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+        <!-- Collector Avatar & Info -->
+        <div class="flex items-center gap-6">
+          <div class="relative">
+            <img 
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300&auto=format&fit=crop" 
+              alt="Collector Avatar" 
+              class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-gold-500/50 shadow-xl"
+            />
+            <span class="absolute bottom-1 right-1 w-5 h-5 bg-gold-500 text-noir-950 rounded-full flex items-center justify-center text-[10px] font-bold" title="Verified Tier-1">
+              ✓
+            </span>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2.5">
+              <span class="text-[10px] uppercase tracking-[0.25em] text-gold-400 font-semibold">
+                Tier-1 Authenticated Member
+              </span>
+              <span class="px-2 py-0.5 text-[9px] uppercase tracking-wider bg-gold-500/10 text-gold-300 border border-gold-500/20">
+                Institutional Escrow Cleared
+              </span>
+            </div>
+            <h1 class="font-serif text-2xl sm:text-3xl text-ivory-100 font-light">
+              Geneva Private Trust & Collection
+            </h1>
+            <p class="text-xs text-noir-400">
+              ID: RV-8849-CH · Member since November 2021 · Geneva & London Enclaves
+            </p>
+          </div>
+        </div>
+
+        <!-- Action CTAs -->
+        <div class="flex flex-wrap items-center gap-3">
+          <a 
+            href="/sell" 
+            class="px-5 py-3 bg-gold-500 hover:bg-gold-400 text-noir-950 text-xs uppercase tracking-widest font-semibold transition-all shadow-md"
+          >
+            + Consign New Piece
+          </a>
+          <a 
+            href="/wishlist" 
+            class="px-5 py-3 bg-noir-950 hover:bg-noir-850 text-ivory-200 border border-noir-700 text-xs uppercase tracking-widest font-medium transition-all"
+          >
+            Saved Folio
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Strip -->
+      <div class="mt-8 pt-8 border-t border-noir-800/80 grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <div>
+          <span class="block text-[10px] uppercase tracking-widest text-noir-400">Consigned Pieces</span>
+          <span id="account-listings-count" class="font-serif text-2xl text-ivory-100 font-light">0</span>
+        </div>
+        <div>
+          <span class="block text-[10px] uppercase tracking-widest text-noir-400">Vault Valuation</span>
+          <span id="account-valuation" class="font-serif text-2xl text-gold-300 font-light">$0</span>
+        </div>
+        <div>
+          <span class="block text-[10px] uppercase tracking-widest text-noir-400">Salon Escrows</span>
+          <span class="font-serif text-2xl text-ivory-100 font-light">14 Completed</span>
+        </div>
+        <div>
+          <span class="block text-[10px] uppercase tracking-widest text-noir-400">Collector Rating</span>
+          <span class="font-serif text-2xl text-gold-300 font-light">5.0 ★</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Consignments Section -->
+    <div class="space-y-6">
+      <div class="flex items-center justify-between pb-4 border-b border-noir-800">
+        <div>
+          <span class="text-[10px] uppercase tracking-[0.25em] text-gold-400 font-semibold block mb-1">Your Portfolio</span>
+          <h2 class="font-serif text-2xl text-ivory-100 font-light">Active Consignments & Salon Listings</h2>
+        </div>
+        <a 
+          href="/sell" 
+          class="text-xs uppercase tracking-wider text-gold-400 hover:text-gold-300 underline underline-offset-4"
+        >
+          Add Another Listing
+        </a>
+      </div>
+
+      <!-- Grid of User Listings -->
+      <div id="user-listings-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Empty State for User Listings -->
+      <div id="no-user-listings" class="hidden text-center py-16 border border-dashed border-noir-800 bg-noir-900/30 p-8">
+        <svg class="w-10 h-10 text-noir-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h3 class="font-serif text-lg text-ivory-200 mb-1">No Active Pieces Listed Currently</h3>
+        <p class="text-xs text-noir-400 max-w-sm mx-auto mb-6">
+          You haven't listed any rare pieces in the salon yet. Use our listing creator to present your collectible to serious patrons.
+        </p>
+        <a 
+          href="/sell" 
+          class="inline-block px-6 py-3 bg-gold-500 text-noir-950 text-xs uppercase tracking-wider font-semibold hover:bg-gold-400 transition-colors"
+        >
+          Create First Listing
+        </a>
+      </div>
+    </div>
+
+    <!-- Collector Status & Security Enclave Section -->
+    <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="p-6 bg-noir-900/60 border border-noir-800 space-y-3">
+        <div class="text-gold-400 font-serif text-xs uppercase tracking-wider font-semibold">Tier-1 AML & Custody Verified</div>
+        <p class="text-xs text-noir-400 leading-relaxed font-light">
+          Your identity and institutional banking credentials are valid through December 2027. Escrow settlements clear without secondary holds.
+        </p>
+      </div>
+
+      <div class="p-6 bg-noir-900/60 border border-noir-800 space-y-3">
+        <div class="text-gold-400 font-serif text-xs uppercase tracking-wider font-semibold">Insured Storage Access</div>
+        <p class="text-xs text-noir-400 leading-relaxed font-light">
+          Geneva FreePort & Knightsbridge Safe Deposit access codes are synced with your biometric collector pass.
+        </p>
+      </div>
+
+      <div class="p-6 bg-noir-900/60 border border-noir-800 space-y-3">
+        <div class="text-gold-400 font-serif text-xs uppercase tracking-wider font-semibold">Private Viewing Concierge</div>
+        <p class="text-xs text-noir-400 leading-relaxed font-light">
+          Need an armored courier or private viewing salon in Zurich or Paris? Contact your dedicated liaison at <span class="text-gold-400">concierge@rarivelle.com</span>.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Client-side script to load user's custom listings -->
+  <script is:inline>
+    (function() {
+      const grid = document.getElementById('user-listings-grid');
+      const emptyState = document.getElementById('no-user-listings');
+      const countEl = document.getElementById('account-listings-count');
+      const valEl = document.getElementById('account-valuation');
+
+      function formatUSD(amount) {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 0
+        }).format(amount);
+      }
+
+      function loadListings() {
+        let list = [];
+        try {
+          const raw = localStorage.getItem('rarivelle_custom_listings');
+          if (raw) list = JSON.parse(raw);
+        } catch (e) {
+          list = [];
+        }
+
+        if (countEl) countEl.textContent = String(list.length);
+
+        if (list.length === 0) {
+          if (grid) grid.innerHTML = '';
+          if (emptyState) emptyState.classList.remove('hidden');
+          if (valEl) valEl.textContent = '$0';
+          return;
+        }
+
+        if (emptyState) emptyState.classList.add('hidden');
+
+        const total = list.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+        if (valEl) valEl.textContent = formatUSD(total);
+
+        if (grid) {
+          grid.innerHTML = list.map((item, idx) => {
+            const img = (item.images && item.images[0]) ? item.images[0] : 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+            return `
+              <div class="bg-noir-900 border border-noir-800 hover:border-gold-500/50 transition-all flex flex-col justify-between overflow-hidden">
+                <div class="relative aspect-4/3 w-full bg-noir-950 overflow-hidden">
+                  <img src="${img}" alt="${item.title}" class="w-full h-full object-cover" />
+                  <span class="absolute top-3 left-3 px-2 py-0.5 text-[9px] uppercase tracking-widest bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 font-semibold backdrop-blur-sm">
+                    Active in Salon
+                  </span>
+                  <button 
+                    type="button" 
+                    data-delete-custom="${idx}" 
+                    class="absolute top-3 right-3 p-1.5 bg-noir-950/80 text-noir-400 hover:text-red-400 border border-white/10 rounded-full cursor-pointer"
+                    title="Delist Piece"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="p-5 flex flex-col flex-1 justify-between space-y-4">
+                  <div>
+                    <div class="text-[10px] text-gold-400 uppercase tracking-widest mb-1">
+                      ${item.category} · Circa ${item.year || 'Historic'}
+                    </div>
+                    <h3 class="font-serif text-base text-ivory-100 line-clamp-2">
+                      <a href="/product/${item.id}">${item.title}</a>
+                    </h3>
+                    <div class="text-xs text-noir-400 mt-1">
+                      Vault: ${item.location || 'Your Custody'}
+                    </div>
+                  </div>
+
+                  <div class="pt-4 border-t border-noir-800 flex items-center justify-between">
+                    <div>
+                      <span class="block text-[9px] uppercase tracking-widest text-noir-400">Listed Price</span>
+                      <span class="font-serif text-lg text-gold-300 font-light">${formatUSD(item.price)}</span>
+                    </div>
+                    <a 
+                      href="/product/${item.id}" 
+                      class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors"
+                    >
+                      View Live Dossier &rarr;
+                    </a>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          // Attach delete listener
+          grid.querySelectorAll('[data-delete-custom]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const idx = Number(btn.getAttribute('data-delete-custom'));
+              if (confirm('Are you sure you wish to withdraw this piece from the salon?')) {
+                list.splice(idx, 1);
+                localStorage.setItem('rarivelle_custom_listings', JSON.stringify(list));
+                loadListings();
+              }
+            });
+          });
+        }
+      }
+
+      loadListings();
+      window.addEventListener('rarivelle:listing-created', loadListings);
+    })();
+  </script>
+</Layout>

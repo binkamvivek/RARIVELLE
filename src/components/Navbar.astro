@@ -1,0 +1,184 @@
+---
+interface Props {
+  currentPath?: string;
+}
+
+const { currentPath = Astro.url.pathname } = Astro.props;
+
+const navLinks = [
+  { label: 'Discover', href: '/discover' },
+  { label: 'Rare Finds', href: '/discover?filter=rare' },
+  { label: 'Sell an Item', href: '/sell' },
+  { label: 'Wishlist', href: '/wishlist' },
+  { label: 'The Vault', href: '/account' },
+];
+---
+
+<header class="sticky top-0 z-50 w-full border-b border-noir-800/80 bg-noir-950/85 backdrop-blur-md transition-all duration-300">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-20">
+      
+      <!-- Left: Navigation Links -->
+      <nav class="hidden md:flex items-center gap-8">
+        <a 
+          href="/discover" 
+          class={`text-xs uppercase tracking-[0.2em] font-medium transition-colors duration-200 hover:text-gold-400 ${
+            currentPath.startsWith('/discover') ? 'text-gold-400 border-b border-gold-400/50 pb-0.5' : 'text-ivory-300/80'
+          }`}
+        >
+          Marketplace
+        </a>
+        <a 
+          href="/discover?filter=rare" 
+          class="text-xs uppercase tracking-[0.2em] font-medium text-ivory-300/80 transition-colors duration-200 hover:text-gold-400"
+        >
+          Rare Finds
+        </a>
+        <a 
+          href="/sell" 
+          class={`text-xs uppercase tracking-[0.2em] font-medium transition-colors duration-200 hover:text-gold-400 ${
+            currentPath === '/sell' ? 'text-gold-400 border-b border-gold-400/50 pb-0.5' : 'text-ivory-300/80'
+          }`}
+        >
+          Sell
+        </a>
+      </nav>
+
+      <!-- Center: Brand Logo -->
+      <div class="flex-1 md:flex-initial flex items-center justify-start md:justify-center">
+        <a href="/" class="group flex flex-col items-center text-center">
+          <span class="font-serif text-2xl sm:text-3xl tracking-[0.3em] font-light text-ivory-100 group-hover:text-gold-300 transition-colors duration-300">
+            RARIVELLE
+          </span>
+          <span class="text-[9px] uppercase tracking-[0.35em] text-gold-400/70 font-sans mt-0.5">
+            Haute Collectibles & Antiquities
+          </span>
+        </a>
+      </div>
+
+      <!-- Right: Actions & Tools -->
+      <div class="flex items-center gap-4 sm:gap-6">
+        <!-- Search Quick Link -->
+        <a 
+          href="/discover" 
+          aria-label="Search collectibles"
+          class="text-ivory-300/70 hover:text-gold-400 transition-colors duration-200 p-2"
+          title="Search Catalog"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </a>
+
+        <!-- Wishlist Link with dynamic badge -->
+        <a 
+          href="/wishlist" 
+          aria-label="Wishlist"
+          class="relative text-ivory-300/70 hover:text-gold-400 transition-colors duration-200 p-2"
+          title="Saved Pieces"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+          <span 
+            id="nav-wishlist-badge" 
+            class="hidden absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gold-500 text-noir-950 text-[9px] font-bold items-center justify-center"
+          >
+            0
+          </span>
+        </a>
+
+        <!-- Account / Vault link -->
+        <a 
+          href="/account" 
+          aria-label="Collector Account"
+          class="hidden sm:flex text-ivory-300/70 hover:text-gold-400 transition-colors duration-200 p-2"
+          title="The Vault"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </a>
+
+        <!-- CTA Button -->
+        <a 
+          href="/sell" 
+          class="hidden lg:inline-flex items-center px-4 py-2 text-xs uppercase tracking-[0.18em] font-medium border border-gold-500/60 text-gold-300 bg-gold-500/5 hover:bg-gold-500 hover:text-noir-950 transition-all duration-300 shadow-sm"
+        >
+          List a Piece
+        </a>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button 
+          id="mobile-menu-btn" 
+          type="button" 
+          aria-label="Open menu"
+          class="md:hidden p-2 text-ivory-300 hover:text-gold-400 transition-colors"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Drawer -->
+  <div id="mobile-menu" class="hidden md:hidden border-t border-noir-800 bg-noir-950 px-6 pt-4 pb-8 space-y-4">
+    <div class="flex flex-col space-y-3 pt-2">
+      {navLinks.map(link => (
+        <a 
+          href={link.href}
+          class="text-sm tracking-widest uppercase font-serif text-ivory-200 hover:text-gold-400 py-2 border-b border-noir-800/40"
+        >
+          {link.label}
+        </a>
+      ))}
+    </div>
+    <div class="pt-4">
+      <a 
+        href="/sell" 
+        class="block w-full text-center py-3 border border-gold-500/70 text-gold-300 text-xs uppercase tracking-widest font-semibold hover:bg-gold-500 hover:text-noir-950 transition-colors"
+      >
+        Consign or Sell a Collectible
+      </a>
+    </div>
+  </div>
+</header>
+
+<script>
+  function updateNavWishlist() {
+    try {
+      const stored = localStorage.getItem('rarivelle_wishlist');
+      const list = stored ? JSON.parse(stored) : [];
+      const badge = document.getElementById('nav-wishlist-badge');
+      if (badge) {
+        if (list.length > 0) {
+          badge.textContent = String(list.length);
+          badge.classList.remove('hidden');
+          badge.classList.add('flex');
+        } else {
+          badge.classList.add('hidden');
+          badge.classList.remove('flex');
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+
+  // Toggle mobile menu
+  const menuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+
+  if (menuBtn && mobileMenu) {
+    menuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+  }
+
+  // Initial and reactive wishlist sync
+  updateNavWishlist();
+  window.addEventListener('rarivelle:wishlist-updated', updateNavWishlist);
+  document.addEventListener('astro:page-load', updateNavWishlist);
+</script>

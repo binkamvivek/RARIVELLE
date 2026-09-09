@@ -1,0 +1,396 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import { 
+  getAllCollectibles, 
+  getCollectibleById, 
+  type Collectible 
+} from '../../data/collectibles';
+import { formatCurrency } from '../../utils/store';
+
+export async function getStaticPaths() {
+  const items = getAllCollectibles();
+  return items.map((item) => ({
+    params: { id: item.id },
+    props: { item },
+  }));
+}
+
+const { id } = Astro.params;
+const { item: staticItem } = Astro.props;
+
+// Fallback to static item if available
+const item = staticItem || getCollectibleById(id as string);
+const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
+---
+
+<Layout 
+  title={item ? `${item.title} | RARIVELLE` : 'Collectible Details | RARIVELLE'}
+  description={item ? item.description.slice(0, 160) : 'Rare collectible details and verified provenance.'}
+>
+  <div id="product-container" data-item-id={id} class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs uppercase tracking-wider text-noir-400 mb-8">
+      <a href="/" class="hover:text-gold-400 transition-colors">Salon</a>
+      <span>/</span>
+      <a href="/discover" class="hover:text-gold-400 transition-colors">Marketplace</a>
+      <span>/</span>
+      <span id="breadcrumb-category" class="text-gold-400/80">{item?.category || 'Collection'}</span>
+    </nav>
+
+    <!-- Main Detail Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      
+      <!-- Left Column: Photography Gallery (7 cols) -->
+      <div class="lg:col-span-7 space-y-4">
+        <!-- Main Large Image -->
+        <div class="relative aspect-4/3 w-full bg-noir-900 border border-noir-800 overflow-hidden group">
+          <img 
+            id="main-product-image" 
+            src={item?.images[0] || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop'} 
+            alt={item?.title || 'Collectible item'} 
+            class="w-full h-full object-cover object-center transition-all duration-500"
+          />
+          <div class="absolute bottom-3 right-3 px-3 py-1 bg-noir-950/80 backdrop-blur-md border border-white/10 text-[10px] uppercase tracking-widest text-ivory-200">
+            High-Resolution Archive Photography
+          </div>
+        </div>
+
+        <!-- Gallery Thumbnails -->
+        <div id="thumbnail-strip" class="flex gap-3 overflow-x-auto pb-2">
+          {item?.images && item.images.map((img, idx) => (
+            <button 
+              type="button"
+              data-thumb-src={img}
+              class={`thumb-btn shrink-0 w-20 h-20 bg-noir-900 border overflow-hidden cursor-pointer transition-all duration-200 ${
+                idx === 0 ? 'border-gold-500 opacity-100' : 'border-noir-800 opacity-60 hover:opacity-100'
+              }`}
+            >
+              <img src={img} alt={`View ${idx + 1}`} class="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+
+        <!-- Provenance & Historical Lineage Box -->
+        <div class="mt-8 p-6 bg-noir-900/50 border border-noir-800 space-y-3">
+          <div class="flex items-center gap-2 text-gold-400 text-xs uppercase tracking-widest font-serif font-semibold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            <span>Archival Provenance & Custody Lineage</span>
+          </div>
+          <p id="product-provenance" class="text-xs text-ivory-300/80 leading-relaxed font-light">
+            {item?.provenance || 'Official physical archive certification verified by RARIVELLE specialist salon curators.'}
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Column: Details, Valuation & Custodian (5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <!-- Header & Badges -->
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="product-category" class="text-xs uppercase tracking-[0.2em] text-gold-400 font-medium">
+              {item?.category || 'Fine Collectible'}
+            </span>
+            <span class="text-noir-600">·</span>
+            <span id="product-year" class="text-xs text-noir-400 font-light">
+              Circa {item?.year || '1970'}
+            </span>
+            <span id="product-condition" class="ml-auto px-2.5 py-0.5 text-[10px] uppercase tracking-widest font-semibold bg-noir-900 text-gold-300 border border-gold-500/30">
+              {item?.condition || 'Authenticated'}
+            </span>
+          </div>
+
+          <h1 id="product-title" class="font-serif text-2xl sm:text-4xl text-ivory-100 font-light leading-tight">
+            {item?.title || 'Collectible Masterpiece'}
+          </h1>
+
+          <div class="flex items-center gap-2 text-xs text-noir-400 pt-1">
+            <svg class="w-3.5 h-3.5 text-noir-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span id="product-location">{item?.location || 'Private Vault'}</span>
+          </div>
+        </div>
+
+        <!-- Valuation Price Card -->
+        <div class="p-6 bg-noir-900 border border-noir-800 space-y-4">
+          <div class="flex items-baseline justify-between">
+            <span class="text-xs uppercase tracking-widest text-noir-400">Curated Valuation</span>
+            <span id="product-price" class="font-serif text-3xl sm:text-4xl text-gold-300 font-light">
+              {item ? formatCurrency(item.price) : '$0'}
+            </span>
+          </div>
+
+          <div class="pt-2 flex flex-col sm:flex-row gap-3">
+            <button 
+              type="button" 
+              id="inquire-btn"
+              class="flex-1 py-3.5 bg-gold-500 hover:bg-gold-400 text-noir-950 text-xs uppercase tracking-[0.2em] font-semibold text-center transition-all duration-200 cursor-pointer shadow-md"
+            >
+              Inquire / Make Private Offer
+            </button>
+            <button 
+              type="button"
+              id="detail-wishlist-btn"
+              data-wishlist-btn={item?.id || id}
+              data-item-title={item?.title || 'Collectible'}
+              class="px-5 py-3.5 bg-noir-950 border border-noir-700 hover:border-gold-500 text-ivory-200 hover:text-gold-400 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              title="Save to Private Wishlist"
+            >
+              <svg class="w-4 h-4 heart-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              <span class="text-xs uppercase tracking-wider hidden sm:inline">Save</span>
+            </button>
+          </div>
+
+          <div class="pt-3 border-t border-noir-800/80 flex items-center justify-between text-[11px] text-noir-400">
+            <span class="flex items-center gap-1">
+              <svg class="w-3.5 h-3.5 text-gold-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              Institutional Escrow Protected
+            </span>
+            <button id="share-btn" type="button" class="text-gold-400 hover:text-gold-300 underline underline-offset-4 cursor-pointer">
+              Share Dossier
+            </button>
+          </div>
+        </div>
+
+        <!-- Custodian / Seller Profile Card -->
+        <div class="p-5 bg-noir-900/60 border border-noir-800 space-y-3">
+          <div class="text-[10px] uppercase tracking-widest text-noir-400 font-semibold">
+            Registered Custodian
+          </div>
+          <div class="flex items-center gap-4">
+            <img 
+              id="seller-avatar" 
+              src={item?.seller?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'} 
+              alt={item?.seller?.name || 'Seller'} 
+              class="w-12 h-12 rounded-full object-cover border border-gold-500/40"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <h4 id="seller-name" class="font-serif text-sm text-ivory-100 font-medium truncate">
+                  {item?.seller?.name || 'Private Member'}
+                </h4>
+                <svg class="w-3.5 h-3.5 text-gold-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="text-xs text-noir-400 flex items-center gap-3 mt-0.5">
+                <span class="text-gold-400 font-medium">★ {item?.seller?.rating || '5.0'}</span>
+                <span>({item?.seller?.reviewsCount || '32'} transactions)</span>
+                <span>Member since {item?.seller?.memberSince || '2019'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description Narrative -->
+        <div class="space-y-2 pt-2">
+          <h3 class="font-serif text-sm uppercase tracking-widest text-ivory-100 font-medium">Curator's Notes</h3>
+          <p id="product-description" class="text-xs text-ivory-300/80 leading-relaxed font-light">
+            {item?.description || 'Authentic rare object verified for private collection.'}
+          </p>
+        </div>
+
+        <!-- Technical Specifications Table -->
+        <div class="space-y-3 pt-4 border-t border-noir-800">
+          <h3 class="font-serif text-sm uppercase tracking-widest text-ivory-100 font-medium">Technical Archive Details</h3>
+          <div id="specs-table" class="space-y-2 text-xs">
+            {item?.specifications && Object.entries(item.specifications).map(([key, val]) => (
+              <div class="flex justify-between py-1.5 border-b border-noir-800/60">
+                <span class="text-noir-400">{key}</span>
+                <span class="text-ivory-200 font-medium text-right">{val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Similar Curated Pieces Section -->
+    <div class="mt-24 pt-16 border-t border-noir-800">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <span class="text-[10px] uppercase tracking-[0.25em] text-gold-400 font-medium block">Complementary Artifacts</span>
+          <h3 class="font-serif text-2xl text-ivory-100 font-light">Similar Pieces in the Archive</h3>
+        </div>
+        <a href="/discover" class="text-xs uppercase tracking-widest text-gold-400 hover:text-gold-300">
+          View All &rarr;
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {similarItems.map(sim => (
+          <ProductCard item={sim} />
+        ))}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Inquiry Modal (Mock interaction) -->
+  <div id="inquiry-modal" class="fixed inset-0 z-50 hidden bg-noir-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-noir-900 border border-noir-800 max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center pb-3 border-b border-noir-800">
+        <h3 class="font-serif text-lg text-ivory-100">Private Inquiry & Viewing Request</h3>
+        <button id="close-modal-btn" class="text-noir-400 hover:text-gold-400 text-xl font-bold cursor-pointer">&times;</button>
+      </div>
+      <p class="text-xs text-noir-400 leading-relaxed">
+        Submit a confidential inquiry or offer directly to the custodian. All communications are logged securely through RARIVELLE's verified escrow protocol.
+      </p>
+      <form id="inquiry-form" class="space-y-4">
+        <div>
+          <label class="block text-[11px] uppercase tracking-wider text-noir-400 mb-1">Your Name or Institution</label>
+          <input type="text" required placeholder="Lord Kensington / Basel Collector Guild" class="w-full bg-noir-950 border border-noir-700 px-3.5 py-2 text-xs text-ivory-100 focus:outline-none focus:border-gold-500" />
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase tracking-wider text-noir-400 mb-1">Private Email</label>
+          <input type="email" required placeholder="collector@domain.com" class="w-full bg-noir-950 border border-noir-700 px-3.5 py-2 text-xs text-ivory-100 focus:outline-none focus:border-gold-500" />
+        </div>
+        <div>
+          <label class="block text-[11px] uppercase tracking-wider text-noir-400 mb-1">Proposed Offer or Viewing Inquiries (USD)</label>
+          <input type="text" placeholder="e.g. Request physical viewing in Geneva salon or offer amount" class="w-full bg-noir-950 border border-noir-700 px-3.5 py-2 text-xs text-ivory-100 focus:outline-none focus:border-gold-500" />
+        </div>
+        <button type="submit" class="w-full py-3 bg-gold-500 hover:bg-gold-400 text-noir-950 text-xs uppercase tracking-widest font-semibold cursor-pointer">
+          Transmit Confidential Inquiry
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Client Script for Gallery, Custom Listings Fallback, and Modal -->
+  <script is:inline>
+    (function() {
+      const container = document.getElementById('product-container');
+      const itemId = container ? container.getAttribute('data-item-id') : null;
+
+      // Check if this is a custom user-created listing from localStorage
+      if (itemId) {
+        try {
+          const raw = localStorage.getItem('rarivelle_custom_listings');
+          if (raw) {
+            const list = JSON.parse(raw);
+            const found = list.find(x => x.id === itemId);
+            if (found) {
+              // Update page content dynamically
+              document.title = `${found.title} | RARIVELLE`;
+              const titleEl = document.getElementById('product-title');
+              if (titleEl) titleEl.textContent = found.title;
+
+              const catEl = document.getElementById('product-category');
+              if (catEl) catEl.textContent = found.category;
+
+              const breadCat = document.getElementById('breadcrumb-category');
+              if (breadCat) breadCat.textContent = found.category;
+
+              const yearEl = document.getElementById('product-year');
+              if (yearEl) yearEl.textContent = `Circa ${found.year || 'Historic'}`;
+
+              const condEl = document.getElementById('product-condition');
+              if (condEl) condEl.textContent = found.condition || 'Authenticated';
+
+              const priceEl = document.getElementById('product-price');
+              if (priceEl) {
+                priceEl.textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(found.price);
+              }
+
+              const locEl = document.getElementById('product-location');
+              if (locEl) locEl.textContent = found.location || 'Private Vault';
+
+              const descEl = document.getElementById('product-description');
+              if (descEl) descEl.textContent = found.description;
+
+              const provEl = document.getElementById('product-provenance');
+              if (provEl) provEl.textContent = found.provenance || 'Private collection consignment. Accompanied by original bill of sale and certificate of authenticity.';
+
+              const mainImg = document.getElementById('main-product-image');
+              if (mainImg && found.images && found.images[0]) {
+                mainImg.src = found.images[0];
+              }
+
+              const sellerName = document.getElementById('seller-name');
+              if (sellerName && found.seller) sellerName.textContent = found.seller.name;
+
+              // Specifications
+              const specsTable = document.getElementById('specs-table');
+              if (specsTable && found.specifications) {
+                specsTable.innerHTML = Object.entries(found.specifications).map(([k, v]) => `
+                  <div class="flex justify-between py-1.5 border-b border-noir-800/60">
+                    <span class="text-noir-400">${k}</span>
+                    <span class="text-ivory-200 font-medium text-right">${v}</span>
+                  </div>
+                `).join('');
+              }
+            }
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // Thumbnail click to swap main photo
+      const mainImg = document.getElementById('main-product-image');
+      const thumbBtns = document.querySelectorAll('.thumb-btn');
+
+      thumbBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const src = btn.getAttribute('data-thumb-src');
+          if (mainImg && src) {
+            mainImg.src = src;
+            thumbBtns.forEach(b => {
+              b.classList.remove('border-gold-500', 'opacity-100');
+              b.classList.add('border-noir-800', 'opacity-60');
+            });
+            btn.classList.add('border-gold-500', 'opacity-100');
+            btn.classList.remove('border-noir-800', 'opacity-60');
+          }
+        });
+      });
+
+      // Share button copy link
+      const shareBtn = document.getElementById('share-btn');
+      if (shareBtn) {
+        shareBtn.addEventListener('click', () => {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(window.location.href);
+            alert('Curated collectible dossier link copied to clipboard.');
+          }
+        });
+      }
+
+      // Modal open / close
+      const modal = document.getElementById('inquiry-modal');
+      const openBtn = document.getElementById('inquire-btn');
+      const closeBtn = document.getElementById('close-modal-btn');
+      const form = document.getElementById('inquiry-form');
+
+      if (openBtn && modal) {
+        openBtn.addEventListener('click', () => {
+          modal.classList.remove('hidden');
+        });
+      }
+      if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+          modal.classList.add('hidden');
+        });
+      }
+      if (form && modal) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          modal.classList.add('hidden');
+          alert('Your confidential acquisition inquiry has been received. Our salon concierge will connect you with the custodian shortly.');
+        });
+      }
+    })();
+  </script>
+</Layout>

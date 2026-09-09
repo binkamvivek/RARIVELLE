@@ -1,11 +1,217 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import ProductCard from '../components/ProductCard.astro';
+import CategoryCard from '../components/CategoryCard.astro';
+import { 
+  CATEGORIES, 
+  getFeaturedCollectibles, 
+  getTrendingCollectibles, 
+  getRecentlyListedCollectibles, 
+  getRareFinds 
+} from '../data/collectibles';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const featuredItems = getFeaturedCollectibles().slice(0, 4);
+const trendingItems = getTrendingCollectibles().slice(0, 4);
+const recentItems = getRecentlyListedCollectibles().slice(0, 4);
+const rareFinds = getRareFinds().slice(0, 4);
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="RARIVELLE | Haute Rare Collectibles & Historic Masterpieces">
+  <!-- Hero Section -->
+  <section class="relative min-h-[90vh] flex items-center justify-center overflow-hidden border-b border-noir-800">
+    <!-- Atmospheric Visual Background with subtle warm gradient & dark overlay -->
+    <div class="absolute inset-0 z-0">
+      <img 
+        src="https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=2000&auto=format&fit=crop" 
+        alt="Haute Horology Masterpiece" 
+        class="w-full h-full object-cover object-center brightness-[0.22] contrast-125 scale-105 transform animate-pulse duration-[10000ms]" 
+      />
+      <div class="absolute inset-0 bg-gradient-to-t from-noir-950 via-noir-950/70 to-noir-950/30"></div>
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(7,7,7,0.85)_100%)]"></div>
+    </div>
+
+    <!-- Hero Content -->
+    <div class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+      <!-- Monogram Tag -->
+      <div class="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-gold-500/30 bg-noir-950/60 backdrop-blur-md mb-8">
+        <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-ping"></span>
+        <span class="text-[11px] uppercase tracking-[0.25em] text-gold-300 font-medium">
+          Haute Auction & Private Treaty Salon
+        </span>
+      </div>
+
+      <!-- Hero Headline (Exact requirement) -->
+      <h1 class="font-serif text-4xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight text-ivory-100 font-light leading-[1.08] mb-6">
+        Discover What Time <br class="hidden sm:inline" />
+        <span class="italic font-display text-gold-300">Couldn't Replace.</span>
+      </h1>
+
+      <!-- Subtext (Exact requirement) -->
+      <p class="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-ivory-200/80 font-light leading-relaxed mb-10">
+        Rare collectibles, remarkable stories, and pieces worth keeping.
+      </p>
+
+      <!-- Action Buttons (Exact requirement) -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+        <a 
+          href="/discover" 
+          class="w-full sm:w-auto px-8 py-4 bg-gold-500 hover:bg-gold-400 text-noir-950 font-medium text-xs uppercase tracking-[0.22em] transition-all duration-300 shadow-lg hover:shadow-gold-500/20"
+        >
+          Explore Collectibles
+        </a>
+        <a 
+          href="/sell" 
+          class="w-full sm:w-auto px-8 py-4 bg-noir-900/80 hover:bg-noir-900 text-ivory-100 border border-noir-700 hover:border-gold-500/50 font-medium text-xs uppercase tracking-[0.22em] transition-all duration-300 backdrop-blur-md"
+        >
+          Sell an Item
+        </a>
+      </div>
+
+      <!-- Prestige Metrics Bar -->
+      <div class="mt-16 pt-10 border-t border-noir-800/80 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div>
+          <div class="font-serif text-2xl sm:text-3xl text-gold-300 font-light">$42M+</div>
+          <div class="text-[10px] uppercase tracking-widest text-noir-400 mt-1">Curated Provenance</div>
+        </div>
+        <div>
+          <div class="font-serif text-2xl sm:text-3xl text-gold-300 font-light">100%</div>
+          <div class="text-[10px] uppercase tracking-widest text-noir-400 mt-1">Archive Authenticated</div>
+        </div>
+        <div>
+          <div class="font-serif text-2xl sm:text-3xl text-gold-300 font-light">38</div>
+          <div class="text-[10px] uppercase tracking-widest text-noir-400 mt-1">Global Vault Enclaves</div>
+        </div>
+        <div>
+          <div class="font-serif text-2xl sm:text-3xl text-gold-300 font-light">0%</div>
+          <div class="text-[10px] uppercase tracking-widest text-noir-400 mt-1">Buyer Premium Forgery</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Categories Section -->
+  <section class="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+      <div>
+        <span class="text-[11px] uppercase tracking-[0.25em] text-gold-400 font-medium block mb-2">Departments</span>
+        <h2 class="font-serif text-3xl sm:text-4xl text-ivory-100 font-light">Featured Categories</h2>
+      </div>
+      <a href="/discover" class="mt-4 md:mt-0 text-xs uppercase tracking-[0.2em] text-gold-400 hover:text-gold-300 inline-flex items-center gap-2 group">
+        Explore Complete Archive
+        <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
+      </a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {CATEGORIES.slice(0, 4).map(cat => (
+        <CategoryCard 
+          id={cat.id} 
+          name={cat.name} 
+          description={cat.description} 
+          image={cat.image} 
+          count={cat.count} 
+        />
+      ))}
+    </div>
+  </section>
+
+  <!-- Trending Collectibles Section -->
+  <section class="py-20 bg-noir-900/40 border-y border-noir-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+        <div>
+          <span class="text-[11px] uppercase tracking-[0.25em] text-gold-400 font-medium block mb-2">High Demand Curations</span>
+          <h2 class="font-serif text-3xl sm:text-4xl text-ivory-100 font-light">Trending Collectibles</h2>
+        </div>
+        <p class="mt-2 md:mt-0 text-xs text-noir-400 max-w-md font-light">
+          Active acquisitions experiencing peak connoisseur attention and historical appreciation.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {trendingItems.map((item, index) => (
+          <ProductCard item={item} priority={index < 2} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Rare Finds Spotlight Section -->
+  <section class="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="border border-gold-500/20 bg-gradient-to-b from-noir-900/80 to-noir-950 p-8 sm:p-12 mb-16 relative overflow-hidden">
+      <div class="absolute -right-20 -top-20 w-80 h-80 bg-gold-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="max-w-2xl mb-12">
+        <span class="text-[11px] uppercase tracking-[0.3em] text-gold-400 font-semibold block mb-2">
+          Museum Grade & Unique Specimens
+        </span>
+        <h2 class="font-serif text-3xl sm:text-5xl text-ivory-100 font-light mb-4">
+          Rare Finds
+        </h2>
+        <p class="text-sm text-ivory-300/80 leading-relaxed font-light">
+          Unrivaled specimens with certified provenance and verified institutional lineage. Only authenticated one-of-a-kind artifacts qualify for the Rare Finds designation.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {rareFinds.map(item => (
+          <ProductCard item={item} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Recently Listed Section -->
+  <section class="py-20 bg-noir-900/30 border-t border-noir-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+        <div>
+          <span class="text-[11px] uppercase tracking-[0.25em] text-gold-400 font-medium block mb-2">Live Salon Inflow</span>
+          <h2 class="font-serif text-3xl sm:text-4xl text-ivory-100 font-light">Recently Listed</h2>
+        </div>
+        <a href="/discover?sort=newest" class="mt-4 md:mt-0 text-xs uppercase tracking-[0.2em] text-gold-400 hover:text-gold-300 inline-flex items-center gap-2 group">
+          View All Recent Additions
+          <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {recentItems.map(item => (
+          <ProductCard item={item} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Consignment / Sell Acquisition Banner -->
+  <section class="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="relative bg-noir-900 border border-noir-800 overflow-hidden px-8 py-16 sm:px-16 sm:py-20 flex flex-col lg:flex-row items-center justify-between gap-10">
+      <div class="max-w-xl">
+        <span class="text-[10px] uppercase tracking-[0.3em] text-gold-400 font-bold block mb-3">
+          Direct Peer Consignment
+        </span>
+        <h3 class="font-serif text-3xl sm:text-4xl text-ivory-100 font-light leading-tight mb-4">
+          Entrust Your Rare Objects to Serious Collectors.
+        </h3>
+        <p class="text-sm text-noir-400 leading-relaxed">
+          List your rare watch, certified numismatic piece, historic first edition, or fine art with zero upfront listing fees. Direct connection with verified patrons and institutional buyers globally.
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-4 shrink-0">
+        <a 
+          href="/sell" 
+          class="px-8 py-4 bg-gold-500 hover:bg-gold-400 text-noir-950 text-xs uppercase tracking-[0.22em] font-semibold text-center transition-all duration-300 shadow-md"
+        >
+          Publish a Listing
+        </a>
+        <a 
+          href="/account" 
+          class="px-8 py-4 bg-noir-950 hover:bg-noir-850 text-ivory-200 border border-noir-700 text-xs uppercase tracking-[0.22em] font-semibold text-center transition-all duration-300"
+        >
+          Collector Vault
+        </a>
+      </div>
+    </div>
+  </section>
 </Layout>

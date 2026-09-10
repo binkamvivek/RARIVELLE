@@ -160,6 +160,24 @@ export const prerender = true;
         window.dispatchEvent(new CustomEvent('rarivelle:messages-updated'));
       }
 
+      // Composer is only usable with a valid thread context:
+      // an open conversation, or a pending new thread from Contact Seller.
+      function hasValidThreadContext() {
+        if (openConvId) return !!(openReceiverId && openProductId);
+        return !!(pendingTo && pendingProduct && pendingTo !== 'rarivelle-house');
+      }
+
+      function updateComposerState() {
+        const valid = hasValidThreadContext();
+        if (chatInput) {
+          chatInput.disabled = !valid;
+          chatInput.placeholder = valid
+            ? 'Write a confidential message…'
+            : 'Select a conversation to begin messaging…';
+        }
+        if (chatSendBtn) chatSendBtn.disabled = !valid;
+      }
+
       async function loadConversations() {
         try {
           const res = await fetch(apiUrl + '?action=getConversations&userId=' + encodeURIComponent(userId));
@@ -168,10 +186,12 @@ export const prerender = true;
           conversations = Array.isArray(json.data) ? json.data : [];
           showPageError(null);
         } catch (err) {
-          showPageError('Unable to load conversations. Please refresh the page.');
+          const detail = err && err.message ? ' (' + err.message + ')' : '';
+          showPageError('Unable to load conversations' + detail + '. Please refresh the page.');
           conversations = [];
         }
         renderConvList();
+        updateComposerState();
         notifyMessagesChanged();
       }
 
@@ -278,6 +298,19 @@ export const prerender = true;
 
       async function openConversation(convId) {
         const conv = conversations.find(function(c) { return c.conversationId === convId; });
+        if (!conv) {
+          openConvId = null;
+          openReceiverId = null;
+          openProductId = null;
+          if (chatLoadingEl) chatLoadingEl.classList.add('hidden');
+          if (chatErrorEl) {
+            chatErrorEl.textContent = 'Conversation not found. It may have been removed — select another conversation.';
+            chatErrorEl.classList.remove('hidden');
+          }
+          updateComposerState();
+          renderConvList();
+          return;
+        }
         openConvId = convId;
         openReceiverId = null;
         openProductId = null;
@@ -303,6 +336,7 @@ export const prerender = true;
         await refreshOpenThread(false);
         if (chatLoadingEl) chatLoadingEl.classList.add('hidden');
         startPolling();
+        updateComposerState();
       }
 
       function closeConversation() {
@@ -315,6 +349,8 @@ export const prerender = true;
           chatPane.classList.remove('flex');
         }
         if (convPane) convPane.classList.remove('hidden');
+        if (chatErrorEl) chatErrorEl.classList.add('hidden');
+        updateComposerState();
         renderConvList();
       }
 
@@ -381,7 +417,7 @@ export const prerender = true;
               chatErrorEl.classList.remove('hidden');
             }
           } finally {
-            if (chatSendBtn) chatSendBtn.disabled = false;
+            updateComposerState();
           }
         });
       }
@@ -423,6 +459,7 @@ export const prerender = true;
             if (window.innerWidth < 1024 && convPane) convPane.classList.add('hidden');
           }
         }
+        updateComposerState();
       })();
     })();
   </script>

@@ -90,6 +90,7 @@ export interface RarivelleProduct {
   images: string[];
   status: 'active' | 'sold' | 'delisted';
   createdAt: string;
+  provenance?: string;
 }
 
 export interface ProductInput {
@@ -103,6 +104,7 @@ export interface ProductInput {
   year?: string;
   location?: string;
   images?: string[];
+  provenance?: string;
 }
 
 export async function getProducts(params?: {

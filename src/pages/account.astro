@@ -224,7 +224,7 @@ export const prerender = true;
       var user = null;
       try { user = rawUser ? JSON.parse(rawUser) : null; } catch(e) {}
 
-      if (!user) {
+      if (!user || !user.userId) {
         window.location.href = '/login';
         return;
       }

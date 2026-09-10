@@ -236,12 +236,12 @@ const navLinks = [
       widget.classList.remove('hidden');
       widget.classList.add('flex');
 
-      if (user && user.name) {
+      if (user && user.userId) {
         // Logged in
         signinLink?.classList.add('hidden');
         userInfo?.classList.remove('hidden');
         userInfo?.classList.add('flex');
-        if (userNameEl) userNameEl.textContent = user.name.split(' ')[0]; // First name only
+        if (userNameEl) userNameEl.textContent = String(user.name || 'Collector').split(' ')[0]; // First name only
       } else {
         // Logged out
         signinLink?.classList.remove('hidden');
@@ -320,6 +320,7 @@ const navLinks = [
   window.addEventListener('rarivelle:messages-updated', updateNavMessages);
   window.addEventListener('rarivelle:auth-updated', () => {
     updateNavAuth();
+    updateNavWishlist();
     updateNavMessages();
   });
   document.addEventListener('astro:page-load', () => {

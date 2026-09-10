@@ -183,7 +183,7 @@ export const prerender = true;
       });
       const json = await res.json();
 
-      if (json.success && json.data) {
+      if (json.success && json.data && json.data.userId) {
         setCurrentUser(json.data);
         showSuccess('Account created! Redirecting to your vault…');
         window.dispatchEvent(new CustomEvent('rarivelle:auth-updated'));

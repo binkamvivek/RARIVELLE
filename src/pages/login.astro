@@ -145,7 +145,7 @@ export const prerender = true;
       });
       const json = await res.json();
 
-      if (json.success && json.data) {
+      if (json.success && json.data && json.data.userId) {
         setCurrentUser(json.data);
         window.dispatchEvent(new CustomEvent('rarivelle:auth-updated'));
         window.location.href = '/account';

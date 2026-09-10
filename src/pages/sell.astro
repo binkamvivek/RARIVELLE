@@ -340,6 +340,13 @@ export const prerender = true;
         return urls.length > 0 ? urls : [];
       }
 
+      // Splits a legacy trailing "\n\nProvenance: …" suffix (pre-column rows only).
+      function splitLegacyProvenance(text) {
+        const m = String(text || '').match(/^(.*?)(?:\r?\n\r?\nProvenance:\s*([\s\S]*))$/);
+        if (!m) return { description: String(text || ''), provenance: '' };
+        return { description: m[1].trimEnd(), provenance: (m[2] || '').trim() };
+      }
+
       // Form inputs
       const titleInput = document.getElementById('form-title');
       const categoryInput = document.getElementById('form-category');
@@ -477,7 +484,17 @@ export const prerender = true;
             if (yearInput) yearInput.value = p.year || '';
             if (conditionInput) conditionInput.value = p.condition || '';
             if (locationInput) locationInput.value = p.location || '';
-            if (descInput) descInput.value = p.description || '';
+            // Compat: listings saved before the provenance column keep it
+            // as a trailing "\n\nProvenance: …" suffix — split it back out once.
+            let descText = p.description || '';
+            let provText = p.provenance || '';
+            if (!provText) {
+              const split = splitLegacyProvenance(descText);
+              descText = split.description;
+              provText = split.provenance;
+            }
+            if (descInput) descInput.value = descText;
+            if (provenanceInput) provenanceInput.value = provText;
             if (urlsInput && p.images) urlsInput.value = p.images.join('\n');
             renderThumbnails();
             updatePreview();
@@ -507,9 +524,6 @@ export const prerender = true;
           }
 
           const imagesToSave = currentImages();
-          const provenance = provenanceInput ? provenanceInput.value.trim() : '';
-          let description = descInput.value.trim();
-          if (provenance) description += '\n\nProvenance: ' + provenance;
 
           const payload = {
             sellerId: currentUser.userId,
@@ -520,8 +534,9 @@ export const prerender = true;
             year: yearInput.value.trim(),
             condition: conditionInput.value,
             location: locationInput.value.trim(),
-            description: description,
-            images: imagesToSave
+            description: descInput.value.trim(),
+            images: imagesToSave,
+            provenance: provenanceInput ? provenanceInput.value.trim() : ''
           };
 
           const isEdit = !!editId;

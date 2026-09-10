@@ -189,9 +189,9 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
                 </svg>
               </div>
               <div class="text-xs text-noir-400 flex items-center gap-3 mt-0.5">
-                <span class="text-gold-400 font-medium">★ {item?.seller?.rating || '5.0'}</span>
-                <span>({item?.seller?.reviewsCount || '32'} transactions)</span>
-                <span>Member since {item?.seller?.memberSince || '2019'}</span>
+                <span class="text-gold-400 font-medium">★ <span id="seller-rating">{item?.seller?.rating || '5.0'}</span></span>
+                <span>(<span id="seller-transactions">{item?.seller?.reviewsCount || '32'}</span> transactions)</span>
+                <span>Member since <span id="seller-since">{item?.seller?.memberSince || '2019'}</span></span>
               </div>
             </div>
           </div>
@@ -291,8 +291,16 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
       const container = document.getElementById('product-container');
       const itemId = container ? container.getAttribute('data-item-id') : null;
 
+      // Splits a legacy trailing "\n\nProvenance: …" suffix (pre-column rows only).
+      function splitLegacyProvenance(text) {
+        const m = String(text || '').match(/^(.*?)(?:\r?\n\r?\nProvenance:\s*([\s\S]*))$/);
+        if (!m) return { description: String(text || ''), provenance: '' };
+        return { description: m[1].trimEnd(), provenance: (m[2] || '').trim() };
+      }
+
       function normalizeApiProduct(p) {
         const statusTag = (p.status && p.status !== 'active') ? ' · ' + String(p.status).toUpperCase() : '';
+        const legacy = (!p.provenance) ? splitLegacyProvenance(p.description) : null;
         return {
           id: p.productId,
           sellerId: p.sellerId,
@@ -302,8 +310,8 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
           condition: (p.condition || 'Authenticated') + statusTag,
           price: p.price,
           location: p.location,
-          description: p.description,
-          provenance: 'Private collection consignment. Accompanied by original bill of sale and certificate of authenticity.',
+          description: legacy ? legacy.description : p.description,
+          provenance: p.provenance || (legacy && legacy.provenance) || 'Private collection consignment. Accompanied by original bill of sale and certificate of authenticity.',
           images: p.images,
           seller: { name: p.sellerName || 'Private Collector' },
           specifications: {
@@ -405,6 +413,34 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
                   </div>
                 `).join('');
               }
+
+              // Gallery: rebuild thumbnails for the resolved item
+              const thumbStrip = document.getElementById('thumbnail-strip');
+              if (thumbStrip && found.images) {
+                thumbStrip.innerHTML = found.images.map((img, idx) => `
+                  <button
+                    type="button"
+                    data-thumb-src="${img}"
+                    class="thumb-btn shrink-0 w-20 h-20 bg-noir-900 border overflow-hidden cursor-pointer transition-all duration-200 ${
+                      idx === 0 ? 'border-gold-500 opacity-100' : 'border-noir-800 opacity-60 hover:opacity-100'
+                    }"
+                  >
+                    <img src="${img}" alt="View ${idx + 1}" class="w-full h-full object-cover" />
+                  </button>
+                `).join('');
+                bindThumbButtons();
+              }
+
+              // Wishlist button: point at the resolved item, then repaint
+              const wishBtn = document.getElementById('detail-wishlist-btn');
+              if (wishBtn) {
+                wishBtn.setAttribute('data-wishlist-btn', found.id);
+                wishBtn.setAttribute('data-item-title', found.title || 'Collectible');
+                window.dispatchEvent(new CustomEvent('rarivelle:wishlist-updated'));
+              }
+
+              // Seller card: refresh avatar + stats from the live profile (best-effort)
+              refreshSellerCard(found.sellerId);
         }
       }
 
@@ -463,24 +499,55 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
       // Default to house state until product data resolves
       setupContact('rarivelle-house', itemId);
 
-      // Thumbnail click to swap main photo
-      const mainImg = document.getElementById('main-product-image');
-      const thumbBtns = document.querySelectorAll('.thumb-btn');
-
-      thumbBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const src = btn.getAttribute('data-thumb-src');
-          if (mainImg && src) {
-            mainImg.src = src;
-            thumbBtns.forEach(b => {
-              b.classList.remove('border-gold-500', 'opacity-100');
-              b.classList.add('border-noir-800', 'opacity-60');
-            });
-            btn.classList.add('border-gold-500', 'opacity-100');
-            btn.classList.remove('border-noir-800', 'opacity-60');
+      // Seller card refresh from the live seller profile (best-effort)
+      const DEFAULT_SELLER_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop';
+      async function refreshSellerCard(sellerId) {
+        const avatarEl = document.getElementById('seller-avatar');
+        const ratingEl = document.getElementById('seller-rating');
+        const transEl = document.getElementById('seller-transactions');
+        const sinceEl = document.getElementById('seller-since');
+        if (!sellerId) {
+          if (avatarEl) avatarEl.src = DEFAULT_SELLER_AVATAR;
+          return;
+        }
+        try {
+          const res = await fetch(apiUrl + '?action=getSellerProfile&userId=' + encodeURIComponent(sellerId));
+          const json = await res.json();
+          if (json.success && json.data) {
+            const p = json.data;
+            if (avatarEl) avatarEl.src = p.avatarUrl || DEFAULT_SELLER_AVATAR;
+            if (ratingEl) ratingEl.textContent = p.rating || '5.0';
+            if (transEl) transEl.textContent = String((p.stats && p.stats.activeListings) || 0);
+            if (sinceEl) sinceEl.textContent = p.memberSince || '—';
+          } else if (avatarEl) {
+            avatarEl.src = DEFAULT_SELLER_AVATAR;
           }
+        } catch (err) {
+          if (avatarEl) avatarEl.src = DEFAULT_SELLER_AVATAR;
+        }
+      }
+
+      // Thumbnail click to swap main photo (rebindable after gallery rebuild)
+      function bindThumbButtons() {
+        const mainImg = document.getElementById('main-product-image');
+        const thumbBtns = document.querySelectorAll('.thumb-btn');
+
+        thumbBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const src = btn.getAttribute('data-thumb-src');
+            if (mainImg && src) {
+              mainImg.src = src;
+              thumbBtns.forEach(b => {
+                b.classList.remove('border-gold-500', 'opacity-100');
+                b.classList.add('border-noir-800', 'opacity-60');
+              });
+              btn.classList.add('border-gold-500', 'opacity-100');
+              btn.classList.remove('border-noir-800', 'opacity-60');
+            }
+          });
         });
-      });
+      }
+      bindThumbButtons();
 
       // Share button copy link
       const shareBtn = document.getElementById('share-btn');

@@ -204,8 +204,14 @@ export const prerender = true;
       let apiItems = null;
 
       function toCardItem(p) {
+        let listedRecently = true;
+        try {
+          const ageMs = Date.now() - new Date(p.createdAt).getTime();
+          listedRecently = !isNaN(ageMs) && ageMs < 30 * 24 * 60 * 60 * 1000;
+        } catch (e) {}
         return {
           id: p.productId,
+          sellerId: p.sellerId,
           title: p.title,
           category: p.category,
           brand: p.brand,
@@ -218,7 +224,7 @@ export const prerender = true;
           seller: { name: p.sellerName || 'Private Collector', verified: true },
           rareFind: false,
           featured: false,
-          recentlyListed: true
+          recentlyListed: listedRecently
         };
       }
 
@@ -362,7 +368,9 @@ export const prerender = true;
                   <div class="text-right">
                     <span class="block text-[9px] uppercase tracking-widest text-noir-400">Custodian</span>
                     <div class="flex items-center gap-1 text-xs text-ivory-300/90 font-medium">
-                      <span class="truncate max-w-[110px]">${(item.seller && item.seller.name) ? item.seller.name : 'Private Collector'}</span>
+                      ${item.sellerId
+                        ? `<a href="/seller/${item.sellerId}" class="truncate max-w-[110px] hover:text-gold-300 transition-colors">${(item.seller && item.seller.name) ? item.seller.name : 'Private Collector'}</a>`
+                        : `<span class="truncate max-w-[110px]">${(item.seller && item.seller.name) ? item.seller.name : 'Private Collector'}</span>`}
                       ${verifiedIcon}
                     </div>
                   </div>

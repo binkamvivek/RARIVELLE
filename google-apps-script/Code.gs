@@ -225,7 +225,8 @@ function handleLogin(body) {
 var PRODUCTS_SHEET_NAME = 'Products';
 var PRODUCT_HEADERS = [
   'productId', 'sellerId', 'title', 'category', 'description', 'price',
-  'condition', 'brand', 'year', 'location', 'images', 'status', 'createdAt'
+  'condition', 'brand', 'year', 'location', 'images', 'status', 'createdAt',
+  'provenance'
 ];
 var PRODUCT_STATUSES = ['active', 'sold', 'delisted'];
 var HOUSE_SELLER_ID = 'rarivelle-house';
@@ -238,6 +239,14 @@ function getOrCreateProductsSheet() {
     sheet.getRange(1, 1, 1, PRODUCT_HEADERS.length).setValues([PRODUCT_HEADERS]);
     sheet.setFrozenRows(1);
   }
+  // Phase 2E-batch3 migration: append newer columns if missing.
+  // Existing rows read as empty; reads/writes are header-driven.
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  PRODUCT_HEADERS.forEach(function(col) {
+    if (headers.indexOf(col) === -1) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(col);
+    }
+  });
   return sheet;
 }
 
@@ -288,6 +297,7 @@ function serializeProduct(row, sellerNameById) {
     title: row.title,
     category: row.category,
     description: row.description,
+    provenance: row.provenance || '',
     price: Number(row.price) || 0,
     condition: row.condition,
     brand: row.brand,
@@ -395,7 +405,8 @@ function handleCreateProduct(body) {
     (body.location || '').trim(),
     JSON.stringify(images),
     'active',
-    createdAt
+    createdAt,
+    (body.provenance || '').trim()
   ];
 
   getOrCreateProductsSheet().appendRow(row);
@@ -405,14 +416,15 @@ function handleCreateProduct(body) {
     data: serializeProduct({
       productId: row[0], sellerId: row[1], title: row[2], category: row[3],
       description: row[4], price: row[5], condition: row[6], brand: row[7],
-      year: row[8], location: row[9], images: row[10], status: row[11], createdAt: row[12]
+      year: row[8], location: row[9], images: row[10], status: row[11], createdAt: row[12],
+      provenance: row[13]
     }, buildSellerNameMap())
   });
 }
 
 var PRODUCT_EDITABLE_FIELDS = [
   'title', 'category', 'description', 'price',
-  'condition', 'brand', 'year', 'location', 'images', 'status'
+  'condition', 'brand', 'year', 'location', 'images', 'status', 'provenance'
 ];
 
 function handleUpdateProduct(body) {

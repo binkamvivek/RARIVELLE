@@ -10,6 +10,8 @@ import {
   getRareFinds 
 } from '../data/collectibles';
 
+export const prerender = true;
+
 const featuredItems = getFeaturedCollectibles().slice(0, 4);
 const trendingItems = getTrendingCollectibles().slice(0, 4);
 const recentItems = getRecentlyListedCollectibles().slice(0, 4);

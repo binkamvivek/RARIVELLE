@@ -36,6 +36,9 @@ import { API_URL } from '../lib/api';
             <p id="account-user-email" class="text-xs text-noir-400">
               Member of RARIVELLE
             </p>
+            <a id="account-profile-link" href="/account" class="text-[11px] text-gold-400 hover:text-gold-300 underline underline-offset-4 transition-colors">
+              View public profile &rarr;
+            </a>
           </div>
         </div>
 
@@ -47,11 +50,17 @@ import { API_URL } from '../lib/api';
           >
             + Consign New Piece
           </a>
-          <a 
-            href="/wishlist" 
+          <a
+            href="/wishlist"
             class="px-5 py-3 bg-noir-950 hover:bg-noir-850 text-ivory-200 border border-noir-700 text-xs uppercase tracking-widest font-medium transition-all"
           >
             Saved Folio
+          </a>
+          <a
+            href="/messages"
+            class="px-5 py-3 bg-noir-950 hover:bg-noir-850 text-ivory-200 border border-noir-700 text-xs uppercase tracking-widest font-medium transition-all"
+          >
+            Messages
           </a>
           <button
             id="account-signout-btn"
@@ -81,6 +90,63 @@ import { API_URL } from '../lib/api';
           <span class="block text-[10px] uppercase tracking-widest text-noir-400">Collector Rating</span>
           <span class="font-serif text-2xl text-gold-300 font-light">5.0 ★</span>
         </div>
+      </div>
+    </div>
+
+    <!-- Seller Profile Editor -->
+    <div class="mb-12 p-6 sm:p-8 bg-noir-900/60 border border-noir-800">
+      <span class="text-[10px] uppercase tracking-[0.25em] text-gold-400 font-semibold block mb-1">Public Seller Profile</span>
+      <h2 class="font-serif text-2xl text-ivory-100 font-light mb-6">Edit Profile</h2>
+
+      <div id="profile-msg" class="hidden mb-4 px-4 py-3 text-xs tracking-wide" role="status"></div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="profile-name" class="block text-[11px] uppercase tracking-wider text-noir-400 mb-1.5">Display Name</label>
+          <input
+            id="profile-name"
+            type="text"
+            placeholder="Your name or collection name"
+            class="w-full bg-noir-950 border border-noir-700 px-3.5 py-2.5 text-xs text-ivory-100 placeholder-noir-500 focus:outline-none focus:border-gold-500 transition-colors"
+          />
+        </div>
+        <div>
+          <label for="profile-location" class="block text-[11px] uppercase tracking-wider text-noir-400 mb-1.5">Location</label>
+          <input
+            id="profile-location"
+            type="text"
+            placeholder="e.g. Geneva, Switzerland"
+            class="w-full bg-noir-950 border border-noir-700 px-3.5 py-2.5 text-xs text-ivory-100 placeholder-noir-500 focus:outline-none focus:border-gold-500 transition-colors"
+          />
+        </div>
+        <div class="sm:col-span-2">
+          <label for="profile-avatar" class="block text-[11px] uppercase tracking-wider text-noir-400 mb-1.5">Profile Image URL</label>
+          <input
+            id="profile-avatar"
+            type="url"
+            placeholder="https://example.com/portrait.jpg"
+            class="w-full bg-noir-950 border border-noir-700 px-3.5 py-2.5 text-xs text-ivory-100 placeholder-noir-500 focus:outline-none focus:border-gold-500 transition-colors"
+          />
+        </div>
+        <div class="sm:col-span-2">
+          <label for="profile-bio" class="block text-[11px] uppercase tracking-wider text-noir-400 mb-1.5">Bio</label>
+          <textarea
+            id="profile-bio"
+            rows="3"
+            placeholder="A short note on your collection focus and expertise…"
+            class="w-full bg-noir-950 border border-noir-700 p-3.5 text-xs text-ivory-100 placeholder-noir-500 focus:outline-none focus:border-gold-500 transition-colors leading-relaxed"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="mt-5">
+        <button
+          id="profile-save-btn"
+          type="button"
+          class="px-6 py-3 bg-gold-500 hover:bg-gold-400 text-noir-950 text-xs uppercase tracking-widest font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          Save Profile
+        </button>
       </div>
     </div>
 
@@ -173,6 +239,88 @@ import { API_URL } from '../lib/api';
         window.dispatchEvent(new CustomEvent('rarivelle:auth-updated'));
         window.location.href = '/';
       });
+
+      // Public profile link
+      var profileLink = document.getElementById('account-profile-link');
+      if (profileLink) profileLink.setAttribute('href', '/seller/' + user.userId);
+
+      // --- Edit Profile (Phase 2D, own profile only) ---
+      var profileName = document.getElementById('profile-name');
+      var profileLocation = document.getElementById('profile-location');
+      var profileAvatar = document.getElementById('profile-avatar');
+      var profileBio = document.getElementById('profile-bio');
+      var profileSaveBtn = document.getElementById('profile-save-btn');
+      var profileMsg = document.getElementById('profile-msg');
+
+      function showProfileMsg(text, ok) {
+        if (!profileMsg) return;
+        profileMsg.textContent = text;
+        profileMsg.classList.remove('hidden');
+        profileMsg.className = 'mb-4 px-4 py-3 text-xs tracking-wide ' + (ok
+          ? 'border border-emerald-500/30 bg-emerald-950/40 text-emerald-400'
+          : 'border border-red-500/30 bg-red-950/40 text-red-400');
+      }
+
+      // Prefill from live profile
+      fetch(apiUrl + '?action=getSellerProfile&userId=' + encodeURIComponent(user.userId))
+        .then(function(res) { return res.json(); })
+        .then(function(json) {
+          if (json.success && json.data) {
+            if (profileName) profileName.value = json.data.name || '';
+            if (profileLocation) profileLocation.value = json.data.location || '';
+            if (profileAvatar) profileAvatar.value = json.data.avatarUrl || '';
+            if (profileBio) profileBio.value = json.data.bio || '';
+          }
+        })
+        .catch(function() {});
+
+      if (profileSaveBtn) {
+        profileSaveBtn.addEventListener('click', function() {
+          var updates = {
+            name: profileName ? profileName.value.trim() : '',
+            location: profileLocation ? profileLocation.value.trim() : '',
+            avatarUrl: profileAvatar ? profileAvatar.value.trim() : '',
+            bio: profileBio ? profileBio.value.trim() : ''
+          };
+          if (!updates.name) {
+            showProfileMsg('Display name cannot be empty.', false);
+            return;
+          }
+          if (updates.avatarUrl && !/^https?:\/\/.+/i.test(updates.avatarUrl)) {
+            showProfileMsg('Profile image must be a valid https URL (or left empty).', false);
+            return;
+          }
+
+          profileSaveBtn.disabled = true;
+          profileSaveBtn.textContent = 'Saving…';
+
+          fetch(apiUrl, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'updateProfile', userId: user.userId, ...updates })
+          }).then(function(res) { return res.json(); }).then(function(json) {
+            profileSaveBtn.disabled = false;
+            profileSaveBtn.textContent = 'Save Profile';
+            if (json.success && json.data) {
+              // Refresh header + session so navbar/discover attribution update
+              if (nameEl) nameEl.textContent = json.data.name || 'Collector';
+              try {
+                var raw = localStorage.getItem('rarivelle_user');
+                var session = raw ? JSON.parse(raw) : {};
+                session.name = json.data.name;
+                localStorage.setItem('rarivelle_user', JSON.stringify(session));
+                window.dispatchEvent(new CustomEvent('rarivelle:auth-updated'));
+              } catch (e) {}
+              showProfileMsg('Profile saved.', true);
+            } else {
+              showProfileMsg(json.error || 'Unable to save profile.', false);
+            }
+          }).catch(function() {
+            profileSaveBtn.disabled = false;
+            profileSaveBtn.textContent = 'Save Profile';
+            showProfileMsg('Unable to reach the server. Please try again.', false);
+          });
+        });
+      }
 
       // --- Listings (Phase 2B: Products API, history preserved via status) ---
       var grid = document.getElementById('user-listings-grid');

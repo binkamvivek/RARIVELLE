@@ -169,16 +169,20 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
             Registered Custodian
           </div>
           <div class="flex items-center gap-4">
-            <img 
-              id="seller-avatar" 
-              src={item?.seller?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'} 
-              alt={item?.seller?.name || 'Seller'} 
-              class="w-12 h-12 rounded-full object-cover border border-gold-500/40"
-            />
+            <a id="seller-avatar-link" href="/seller/rarivelle-house" class="shrink-0">
+              <img
+                id="seller-avatar"
+                src={item?.seller?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop'}
+                alt={item?.seller?.name || 'Seller'}
+                class="w-12 h-12 rounded-full object-cover border border-gold-500/40"
+              />
+            </a>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-1.5">
                 <h4 id="seller-name" class="font-serif text-sm text-ivory-100 font-medium truncate">
-                  {item?.seller?.name || 'Private Member'}
+                  <a id="seller-name-link" href="/seller/rarivelle-house" class="hover:text-gold-300 transition-colors">
+                    {item?.seller?.name || 'Private Member'}
+                  </a>
                 </h4>
                 <svg class="w-3.5 h-3.5 text-gold-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
@@ -190,6 +194,18 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
                 <span>Member since {item?.seller?.memberSince || '2019'}</span>
               </div>
             </div>
+          </div>
+          <div id="contact-seller-wrap" class="pt-3 border-t border-noir-800/60 hidden">
+            <button
+              id="contact-seller-btn"
+              type="button"
+              class="w-full py-3 bg-noir-950 border border-gold-500/40 hover:bg-gold-500 text-gold-300 hover:text-noir-950 text-xs uppercase tracking-[0.2em] font-semibold transition-all duration-200 cursor-pointer"
+            >
+              Contact Seller
+            </button>
+            <p id="contact-seller-note" class="hidden text-[11px] text-noir-400 text-center leading-relaxed">
+              House collection piece — enquiries via <span class="text-gold-400">concierge@rarivelle.com</span>
+            </p>
           </div>
         </div>
 
@@ -279,6 +295,7 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
         const statusTag = (p.status && p.status !== 'active') ? ' · ' + String(p.status).toUpperCase() : '';
         return {
           id: p.productId,
+          sellerId: p.sellerId,
           title: p.title,
           category: p.category,
           year: p.year,
@@ -368,8 +385,15 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
                 mainImg.src = found.images[0];
               }
 
-              const sellerName = document.getElementById('seller-name');
+              const sellerName = document.getElementById('seller-name-link');
               if (sellerName && found.seller) sellerName.textContent = found.seller.name;
+              if (found.sellerId) {
+                const nameLink = document.getElementById('seller-name-link');
+                if (nameLink) nameLink.setAttribute('href', '/seller/' + found.sellerId);
+                const avatarLink = document.getElementById('seller-avatar-link');
+                if (avatarLink) avatarLink.setAttribute('href', '/seller/' + found.sellerId);
+                setupContact(found.sellerId, found.id);
+              }
 
               // Specifications
               const specsTable = document.getElementById('specs-table');
@@ -383,6 +407,61 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
               }
         }
       }
+
+      // Contact Seller states (Phase 2E): hidden for house pieces, disabled for own listing
+      let contactSellerId = null;
+      let contactProductId = itemId;
+
+      function getContactUser() {
+        try {
+          const raw = localStorage.getItem('rarivelle_user');
+          const u = raw ? JSON.parse(raw) : null;
+          return u && u.userId ? u : null;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function setupContact(sellerId, productId) {
+        contactSellerId = sellerId || null;
+        if (productId) contactProductId = productId;
+        const wrap = document.getElementById('contact-seller-wrap');
+        const btn = document.getElementById('contact-seller-btn');
+        const note = document.getElementById('contact-seller-note');
+        if (!wrap || !btn || !note) return;
+        wrap.classList.remove('hidden');
+        const me = getContactUser();
+        if (!contactSellerId || contactSellerId === 'rarivelle-house') {
+          btn.classList.add('hidden');
+          note.classList.remove('hidden');
+        } else if (me && me.userId === contactSellerId) {
+          btn.classList.remove('hidden');
+          btn.disabled = true;
+          btn.textContent = 'Your Listing';
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+          note.classList.add('hidden');
+        } else {
+          btn.classList.remove('hidden');
+          note.classList.add('hidden');
+        }
+      }
+
+      const contactBtn = document.getElementById('contact-seller-btn');
+      if (contactBtn) {
+        contactBtn.addEventListener('click', () => {
+          const me = getContactUser();
+          if (!me) {
+            window.location.href = '/login';
+            return;
+          }
+          if (!contactSellerId || contactSellerId === 'rarivelle-house' || contactSellerId === me.userId) return;
+          const conv = contactProductId + '|' + me.userId;
+          window.location.href = '/messages?conv=' + encodeURIComponent(conv) + '&to=' + encodeURIComponent(contactSellerId) + '&product=' + encodeURIComponent(contactProductId || '');
+        });
+      }
+
+      // Default to house state until product data resolves
+      setupContact('rarivelle-house', itemId);
 
       // Thumbnail click to swap main photo
       const mainImg = document.getElementById('main-product-image');

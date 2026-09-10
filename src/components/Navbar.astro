@@ -10,6 +10,7 @@ const navLinks = [
   { label: 'Rare Finds', href: '/discover?filter=rare' },
   { label: 'Sell an Item', href: '/sell' },
   { label: 'Wishlist', href: '/wishlist' },
+  { label: 'Messages', href: '/messages' },
   { label: 'The Vault', href: '/account' },
 ];
 ---
@@ -80,8 +81,26 @@ const navLinks = [
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
-          <span 
-            id="nav-wishlist-badge" 
+          <span
+            id="nav-wishlist-badge"
+            class="hidden absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gold-500 text-noir-950 text-[9px] font-bold items-center justify-center"
+          >
+            0
+          </span>
+        </a>
+
+        <!-- Messages Link with unread badge -->
+        <a
+          href="/messages"
+          aria-label="Messages"
+          class="relative text-ivory-300/70 hover:text-gold-400 transition-colors duration-200 p-2"
+          title="Private Messages"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <span
+            id="nav-messages-badge"
             class="hidden absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gold-500 text-noir-950 text-[9px] font-bold items-center justify-center"
           >
             0
@@ -165,25 +184,41 @@ const navLinks = [
 </header>
 
 <script>
-  // ------ Wishlist badge ------
-  function updateNavWishlist() {
+  import { API_URL } from '../lib/api';
+
+  // ------ Wishlist badge (Phase 2C: per-user count from Sheets) ------
+  let navWishlistCount = 0;
+
+  function paintNavWishlistBadge() {
+    const badge = document.getElementById('nav-wishlist-badge');
+    if (!badge) return;
+    if (navWishlistCount > 0) {
+      badge.textContent = String(navWishlistCount);
+      badge.classList.remove('hidden');
+      badge.classList.add('flex');
+    } else {
+      badge.classList.add('hidden');
+      badge.classList.remove('flex');
+    }
+  }
+
+  async function updateNavWishlist() {
     try {
-      const stored = localStorage.getItem('rarivelle_wishlist');
-      const list = stored ? JSON.parse(stored) : [];
-      const badge = document.getElementById('nav-wishlist-badge');
-      if (badge) {
-        if (list.length > 0) {
-          badge.textContent = String(list.length);
-          badge.classList.remove('hidden');
-          badge.classList.add('flex');
-        } else {
-          badge.classList.add('hidden');
-          badge.classList.remove('flex');
-        }
+      const raw = localStorage.getItem('rarivelle_user');
+      const user = raw ? JSON.parse(raw) : null;
+      if (!user || !user.userId) {
+        navWishlistCount = 0;
+        paintNavWishlistBadge();
+        return;
       }
+      const res = await fetch(`${API_URL}?action=getWishlist&userId=${encodeURIComponent(user.userId)}`);
+      const json = await res.json();
+      navWishlistCount = json.success && Array.isArray(json.data) ? json.data.length : 0;
     } catch (e) {
       console.warn(e);
+      navWishlistCount = 0;
     }
+    paintNavWishlistBadge();
   }
 
   // ------ Auth state ------
@@ -238,15 +273,58 @@ const navLinks = [
   // Sign out button
   document.getElementById('nav-signout-btn')?.addEventListener('click', handleSignOut);
 
+  // ------ Messages unread badge (Phase 2E) ------
+  let navUnreadCount = 0;
+
+  function paintNavMessagesBadge() {
+    const badge = document.getElementById('nav-messages-badge');
+    if (!badge) return;
+    if (navUnreadCount > 0) {
+      badge.textContent = String(navUnreadCount > 99 ? '99+' : navUnreadCount);
+      badge.classList.remove('hidden');
+      badge.classList.add('flex');
+    } else {
+      badge.classList.add('hidden');
+      badge.classList.remove('flex');
+    }
+  }
+
+  async function updateNavMessages() {
+    try {
+      const raw = localStorage.getItem('rarivelle_user');
+      const user = raw ? JSON.parse(raw) : null;
+      if (!user || !user.userId) {
+        navUnreadCount = 0;
+        paintNavMessagesBadge();
+        return;
+      }
+      const res = await fetch(`${API_URL}?action=getConversations&userId=${encodeURIComponent(user.userId)}`);
+      const json = await res.json();
+      navUnreadCount = json.success && Array.isArray(json.data)
+        ? json.data.reduce((acc: number, c: { unreadCount: number }) => acc + (Number(c.unreadCount) || 0), 0)
+        : 0;
+    } catch (e) {
+      console.warn(e);
+      navUnreadCount = 0;
+    }
+    paintNavMessagesBadge();
+  }
+
   // Initial sync
   updateNavWishlist();
   updateNavAuth();
+  updateNavMessages();
 
   // Reactive updates
   window.addEventListener('rarivelle:wishlist-updated', updateNavWishlist);
-  window.addEventListener('rarivelle:auth-updated', updateNavAuth);
+  window.addEventListener('rarivelle:messages-updated', updateNavMessages);
+  window.addEventListener('rarivelle:auth-updated', () => {
+    updateNavAuth();
+    updateNavMessages();
+  });
   document.addEventListener('astro:page-load', () => {
     updateNavWishlist();
     updateNavAuth();
+    updateNavMessages();
   });
 </script>

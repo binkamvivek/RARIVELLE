@@ -7,6 +7,8 @@ var SHEET_NAME = 'Users';
 
 // ------ Sheet Bootstrap ------
 
+var USER_PROFILE_COLUMNS = ['avatarUrl', 'location', 'bio', 'verified'];
+
 function getOrCreateSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAME);
@@ -18,6 +20,14 @@ function getOrCreateSheet() {
     ]]);
     sheet.setFrozenRows(1);
   }
+  // Phase 2D migration: append public profile columns if missing.
+  // Existing rows read as empty; login/signup logic is unaffected.
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  USER_PROFILE_COLUMNS.forEach(function(col) {
+    if (headers.indexOf(col) === -1) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(col);
+    }
+  });
   return sheet;
 }
 
@@ -58,6 +68,14 @@ function doGet(e) {
       return handleGetProducts(params);
     } else if (action === 'getProduct') {
       return handleGetProduct(params);
+    } else if (action === 'getWishlist') {
+      return handleGetWishlist(params);
+    } else if (action === 'getSellerProfile') {
+      return handleGetSellerProfile(params);
+    } else if (action === 'getConversations') {
+      return handleGetConversations(params);
+    } else if (action === 'getMessages') {
+      return handleGetMessages(params);
     }
 
     return jsonResponse({ success: false, error: 'Unknown action: ' + action });
@@ -109,6 +127,16 @@ function doPost(e) {
       return handleUpdateProduct(body);
     } else if (action === 'deleteProduct') {
       return handleDeleteProduct(body);
+    } else if (action === 'addWishlist') {
+      return handleAddWishlist(body);
+    } else if (action === 'removeWishlist') {
+      return handleRemoveWishlist(body);
+    } else if (action === 'updateProfile') {
+      return handleUpdateProfile(body);
+    } else if (action === 'sendMessage') {
+      return handleSendMessage(body);
+    } else if (action === 'markRead') {
+      return handleMarkRead(body);
     }
 
     return jsonResponse({ success: false, error: 'Unknown action: ' + action });
@@ -142,7 +170,7 @@ function handleSignup(body) {
   var userId = generateId();
   var createdAt = new Date().toISOString();
 
-  sheet.appendRow([userId, name, email, password, createdAt]);
+  sheet.appendRow([userId, name, email, password, createdAt, '', '', '', 'TRUE']);
 
   return jsonResponse({
     success: true,
@@ -507,4 +535,540 @@ function handleDeleteProduct(body) {
   found.status = 'delisted';
 
   return jsonResponse({ success: true, data: serializeProduct(found, buildSellerNameMap()) });
+}
+
+// ============================================================
+//  PHASE 2C — Wishlist Backend (per-user saved pieces)
+//  Wishlist sheet columns:
+//  wishlistId | userId | productId | createdAt
+//  - Only active products are ever returned.
+// ============================================================
+
+var WISHLIST_SHEET_NAME = 'Wishlist';
+var WISHLIST_HEADERS = ['wishlistId', 'userId', 'productId', 'createdAt'];
+
+function getOrCreateWishlistSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(WISHLIST_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(WISHLIST_SHEET_NAME);
+    sheet.getRange(1, 1, 1, WISHLIST_HEADERS.length).setValues([WISHLIST_HEADERS]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function generateWishlistId() {
+  return 'rv-w-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+}
+
+function getWishlistRows() {
+  var sheet = getOrCreateWishlistSheet();
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return { sheet: sheet, headers: WISHLIST_HEADERS, rows: [] };
+  var headers = data[0];
+  var rows = [];
+  for (var r = 1; r < data.length; r++) {
+    var obj = { __rowNum: r + 1 };
+    headers.forEach(function(h, i) { obj[h] = data[r][i]; });
+    if (obj.wishlistId) rows.push(obj);
+  }
+  return { sheet: sheet, headers: headers, rows: rows };
+}
+
+function userExists(userId) {
+  if (!userId) return false;
+  var users = getAllUsers(getOrCreateSheet());
+  return users.some(function(u) { return u.userId === userId; });
+}
+
+function findProductById(productId) {
+  var found = null;
+  getProductRows().rows.forEach(function(p) {
+    if (p.productId === productId) found = p;
+  });
+  return found;
+}
+
+function serializeWishlistRow(row, sellerNameById, productCache) {
+  var product = productCache[row.productId];
+  return {
+    wishlistId: row.wishlistId,
+    userId: row.userId,
+    productId: row.productId,
+    createdAt: row.createdAt,
+    product: product ? serializeProduct(product, sellerNameById) : null
+  };
+}
+
+function handleGetWishlist(params) {
+  var userId = (params.userId || '').trim();
+  if (!userId) {
+    return jsonResponse({ success: false, error: 'userId is required' });
+  }
+  if (!userExists(userId)) {
+    return jsonResponse({ success: false, error: 'Unknown user. Please sign in again.' });
+  }
+
+  var rows = getWishlistRows().rows.filter(function(w) { return w.userId === userId; });
+  var sellerNameById = buildSellerNameMap();
+
+  // Cache active products by id; hide sold/delisted/missing products.
+  var productCache = {};
+  getProductRows().rows.forEach(function(p) {
+    if (String(p.status).toLowerCase() === 'active') productCache[p.productId] = p;
+  });
+
+  var items = rows
+    .map(function(w) { return serializeWishlistRow(w, sellerNameById, productCache); })
+    .filter(function(item) { return item.product !== null; });
+
+  return jsonResponse({ success: true, data: items });
+}
+
+function handleAddWishlist(body) {
+  var userId = (body.userId || '').trim();
+  var productId = (body.productId || '').trim();
+
+  if (!userId || !productId) {
+    return jsonResponse({ success: false, error: 'userId and productId are required.' });
+  }
+  if (!userExists(userId)) {
+    return jsonResponse({ success: false, error: 'Unknown user. Please sign in again.' });
+  }
+  var product = findProductById(productId);
+  if (!product) {
+    return jsonResponse({ success: false, error: 'Product not found' });
+  }
+
+  // Idempotent: return the existing save instead of duplicating.
+  var existing = null;
+  getWishlistRows().rows.forEach(function(w) {
+    if (w.userId === userId && w.productId === productId) existing = w;
+  });
+
+  var sellerNameById = buildSellerNameMap();
+  var productCache = {};
+  productCache[product.productId] = product;
+
+  if (existing) {
+    return jsonResponse({ success: true, data: serializeWishlistRow(existing, sellerNameById, productCache), alreadySaved: true });
+  }
+
+  var wishlistId = generateWishlistId();
+  var createdAt = new Date().toISOString();
+  getOrCreateWishlistSheet().appendRow([wishlistId, userId, productId, createdAt]);
+
+  return jsonResponse({
+    success: true,
+    data: serializeWishlistRow(
+      { wishlistId: wishlistId, userId: userId, productId: productId, createdAt: createdAt },
+      sellerNameById, productCache
+    )
+  });
+}
+
+function handleRemoveWishlist(body) {
+  var userId = (body.userId || '').trim();
+  var productId = (body.productId || '').trim();
+
+  if (!userId || !productId) {
+    return jsonResponse({ success: false, error: 'userId and productId are required.' });
+  }
+
+  var result = getWishlistRows();
+  var found = null;
+  result.rows.forEach(function(w) {
+    if (w.userId === userId && w.productId === productId) found = w;
+  });
+
+  if (!found) {
+    return jsonResponse({ success: false, error: 'Saved item not found' });
+  }
+
+  result.sheet.deleteRow(found.__rowNum);
+  return jsonResponse({ success: true, data: { productId: productId } });
+}
+
+// ============================================================
+//  PHASE 2D — Seller Profiles (public, from Users data)
+//  - Rating 5.0 and verified=true are placeholders for now.
+//  - memberSince is derived from the account createdAt year.
+//  - Only active listings are included.
+// ============================================================
+
+function isVerifiedCell(value) {
+  if (value === true) return true;
+  var s = String(value || '').trim().toLowerCase();
+  return s === 'true' || s === 'yes' || s === '1';
+}
+
+function memberSinceYear(createdAt) {
+  var d = new Date(createdAt);
+  var y = d.getFullYear();
+  return isNaN(y) ? '' : String(y);
+}
+
+function serializePublicProfile(userRow, activeListings, sellerNameById) {
+  var total = activeListings.reduce(function(acc, p) {
+    return acc + (Number(p.price) || 0);
+  }, 0);
+  return {
+    userId: userRow.userId,
+    name: userRow.name,
+    avatarUrl: userRow.avatarUrl || '',
+    location: userRow.location || '',
+    bio: userRow.bio || '',
+    rating: '5.0',
+    verified: true,
+    memberSince: memberSinceYear(userRow.createdAt),
+    stats: {
+      activeListings: activeListings.length,
+      totalValuation: total
+    },
+    listings: activeListings.map(function(p) { return serializeProduct(p, sellerNameById); })
+  };
+}
+
+function handleGetSellerProfile(params) {
+  var userId = (params.userId || '').trim();
+  if (!userId) {
+    return jsonResponse({ success: false, error: 'userId is required' });
+  }
+
+  var sellerNameById = buildSellerNameMap();
+
+  // House pseudo-profile for the seeded salon catalog.
+  if (userId === HOUSE_SELLER_ID) {
+    var houseListings = getProductRows().rows.filter(function(p) {
+      return p.sellerId === HOUSE_SELLER_ID && String(p.status).toLowerCase() === 'active';
+    });
+    return jsonResponse({
+      success: true,
+      data: {
+        userId: HOUSE_SELLER_ID,
+        name: 'Rarivelle Salon',
+        avatarUrl: '',
+        location: 'Geneva, Switzerland',
+        bio: 'The house-curated salon of RARIVELLE — museum-grade pieces selected by our specialists.',
+        rating: '5.0',
+        verified: true,
+        memberSince: '2015',
+        stats: {
+          activeListings: houseListings.length,
+          totalValuation: houseListings.reduce(function(a, p) { return a + (Number(p.price) || 0); }, 0)
+        },
+        listings: houseListings.map(function(p) { return serializeProduct(p, sellerNameById); })
+      }
+    });
+  }
+
+  var user = null;
+  getAllUsers(getOrCreateSheet()).forEach(function(u) {
+    if (u.userId === userId) user = u;
+  });
+
+  if (!user) {
+    return jsonResponse({ success: false, error: 'Seller not found' });
+  }
+
+  var listings = getProductRows().rows.filter(function(p) {
+    return p.sellerId === userId && String(p.status).toLowerCase() === 'active';
+  });
+
+  return jsonResponse({ success: true, data: serializePublicProfile(user, listings, sellerNameById) });
+}
+
+var PROFILE_EDITABLE_FIELDS = ['name', 'avatarUrl', 'location', 'bio'];
+
+function handleUpdateProfile(body) {
+  var userId = (body.userId || '').trim();
+  if (!userId) {
+    return jsonResponse({ success: false, error: 'userId is required.' });
+  }
+
+  var sheet = getOrCreateSheet();
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) {
+    return jsonResponse({ success: false, error: 'Seller not found' });
+  }
+
+  var headers = data[0];
+  var colIndex = {};
+  headers.forEach(function(h, i) { colIndex[h] = i + 1; });
+
+  var rowNum = -1;
+  var userRow = null;
+  for (var r = 1; r < data.length; r++) {
+    var obj = {};
+    headers.forEach(function(h, i) { obj[h] = data[r][i]; });
+    if (obj.userId === userId) {
+      rowNum = r + 1;
+      userRow = obj;
+      break;
+    }
+  }
+
+  if (!userRow) {
+    return jsonResponse({ success: false, error: 'Seller not found' });
+  }
+
+  var touched = false;
+  PROFILE_EDITABLE_FIELDS.forEach(function(field) {
+    if (body[field] === undefined || body[field] === null) return;
+    var value = String(body[field]).trim();
+    if (field === 'name' && !value) return;
+    if (field === 'avatarUrl' && value && !/^https?:\/\/.+/i.test(value)) return;
+    sheet.getRange(rowNum, colIndex[field]).setValue(value);
+    userRow[field] = value;
+    touched = true;
+  });
+
+  if (!touched) {
+    return jsonResponse({ success: false, error: 'No valid profile fields to update.' });
+  }
+
+  var sellerNameById = buildSellerNameMap();
+  var listings = getProductRows().rows.filter(function(p) {
+    return p.sellerId === userId && String(p.status).toLowerCase() === 'active';
+  });
+
+  return jsonResponse({ success: true, data: serializePublicProfile(userRow, listings, sellerNameById) });
+}
+
+// ============================================================
+//  PHASE 2E — Buyer-Seller Messaging
+//  Messages sheet columns:
+//  messageId | conversationId | senderId | receiverId |
+//  productId | message | timestamp | read
+//  - conversationId is deterministic: productId + '|' + buyerId
+//    (one thread per buyer x piece; reopening never duplicates).
+//  - read is 'TRUE' once the receiver has seen the message.
+// ============================================================
+
+var MESSAGES_SHEET_NAME = 'Messages';
+var MESSAGE_HEADERS = [
+  'messageId', 'conversationId', 'senderId', 'receiverId',
+  'productId', 'message', 'timestamp', 'read'
+];
+var MAX_MESSAGE_LENGTH = 2000;
+
+function getOrCreateMessagesSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(MESSAGES_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(MESSAGES_SHEET_NAME);
+    sheet.getRange(1, 1, 1, MESSAGE_HEADERS.length).setValues([MESSAGE_HEADERS]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function generateMessageId() {
+  return 'rv-m-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+}
+
+function buildConversationId(productId, buyerId) {
+  return productId + '|' + buyerId;
+}
+
+function getMessageRows() {
+  var sheet = getOrCreateMessagesSheet();
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return { sheet: sheet, headers: MESSAGE_HEADERS, rows: [] };
+  var headers = data[0];
+  var rows = [];
+  for (var r = 1; r < data.length; r++) {
+    var obj = { __rowNum: r + 1 };
+    headers.forEach(function(h, i) { obj[h] = data[r][i]; });
+    if (obj.messageId) rows.push(obj);
+  }
+  return { sheet: sheet, headers: headers, rows: rows };
+}
+
+function isReadCell(value) {
+  if (value === true) return true;
+  return String(value || '').trim().toUpperCase() === 'TRUE';
+}
+
+function serializeMessage(row) {
+  return {
+    messageId: row.messageId,
+    conversationId: row.conversationId,
+    senderId: row.senderId,
+    receiverId: row.receiverId,
+    productId: row.productId,
+    message: row.message,
+    timestamp: row.timestamp,
+    read: isReadCell(row.read)
+  };
+}
+
+function handleSendMessage(body) {
+  var senderId = (body.senderId || '').trim();
+  var receiverId = (body.receiverId || '').trim();
+  var productId = (body.productId || '').trim();
+  var text = (body.message || '').trim();
+
+  if (!senderId || !receiverId || !productId || !text) {
+    return jsonResponse({ success: false, error: 'senderId, receiverId, productId, and message are required.' });
+  }
+  if (text.length > MAX_MESSAGE_LENGTH) {
+    return jsonResponse({ success: false, error: 'Message is too long (max 2000 characters).' });
+  }
+  if (!userExists(senderId) || !userExists(receiverId)) {
+    return jsonResponse({ success: false, error: 'Unknown sender or receiver. Please sign in again.' });
+  }
+  var product = findProductById(productId);
+  if (!product) {
+    return jsonResponse({ success: false, error: 'Product not found' });
+  }
+  if (String(product.status).toLowerCase() !== 'active') {
+    return jsonResponse({ success: false, error: 'This listing is no longer active.' });
+  }
+  if (senderId === product.sellerId) {
+    return jsonResponse({ success: false, error: 'You cannot message your own listing.' });
+  }
+  if (receiverId !== product.sellerId && senderId !== product.sellerId) {
+    return jsonResponse({ success: false, error: 'Messages must involve the seller.' });
+  }
+  if (receiverId === HOUSE_SELLER_ID) {
+    return jsonResponse({ success: false, error: 'This house piece is handled via the concierge.' });
+  }
+
+  // Buyer is whoever is not the seller.
+  var buyerId = senderId === product.sellerId ? receiverId : senderId;
+  var conversationId = buildConversationId(productId, buyerId);
+
+  var messageId = generateMessageId();
+  var timestamp = new Date().toISOString();
+  getOrCreateMessagesSheet().appendRow([
+    messageId, conversationId, senderId, receiverId, productId, text, timestamp, 'FALSE'
+  ]);
+
+  return jsonResponse({
+    success: true,
+    data: serializeMessage({
+      messageId: messageId, conversationId: conversationId, senderId: senderId,
+      receiverId: receiverId, productId: productId, message: text,
+      timestamp: timestamp, read: 'FALSE'
+    })
+  });
+}
+
+function handleGetConversations(params) {
+  var userId = (params.userId || '').trim();
+  if (!userId) {
+    return jsonResponse({ success: false, error: 'userId is required' });
+  }
+  if (!userExists(userId)) {
+    return jsonResponse({ success: false, error: 'Unknown user. Please sign in again.' });
+  }
+
+  var rows = getMessageRows().rows.filter(function(m) {
+    return m.senderId === userId || m.receiverId === userId;
+  });
+  rows.sort(function(a, b) {
+    return new Date(a.timestamp) - new Date(b.timestamp);
+  });
+
+  var sellerNameById = buildSellerNameMap();
+  var productCache = {};
+  getProductRows().rows.forEach(function(p) { productCache[p.productId] = p; });
+
+  var threads = {};
+  rows.forEach(function(m) {
+    var t = threads[m.conversationId];
+    if (!t) {
+      t = threads[m.conversationId] = {
+        conversationId: m.conversationId,
+        productId: m.productId,
+        messages: []
+      };
+    }
+    t.messages.push(m);
+  });
+
+  var conversations = Object.keys(threads).map(function(convId) {
+    var t = threads[convId];
+    var last = t.messages[t.messages.length - 1];
+    var counterpartId = last.senderId === userId ? last.receiverId : last.senderId;
+    var product = productCache[t.productId];
+    var unread = t.messages.filter(function(m) {
+      return m.receiverId === userId && !isReadCell(m.read);
+    }).length;
+    return {
+      conversationId: convId,
+      productId: t.productId,
+      productTitle: product ? product.title : 'Removed listing',
+      productImage: product ? parseImagesCell(product.images)[0] || '' : '',
+      counterpartId: counterpartId,
+      counterpartName: sellerNameById[counterpartId] || 'Private Collector',
+      lastMessage: last.message,
+      lastTimestamp: last.timestamp,
+      lastSenderId: last.senderId,
+      unreadCount: unread
+    };
+  });
+
+  conversations.sort(function(a, b) {
+    return new Date(b.lastTimestamp) - new Date(a.lastTimestamp);
+  });
+
+  return jsonResponse({ success: true, data: conversations });
+}
+
+function handleGetMessages(params) {
+  var conversationId = (params.conversationId || '').trim();
+  var userId = (params.userId || '').trim();
+  if (!conversationId || !userId) {
+    return jsonResponse({ success: false, error: 'conversationId and userId are required' });
+  }
+
+  var messages = getMessageRows().rows.filter(function(m) {
+    return m.conversationId === conversationId;
+  });
+
+  if (messages.length === 0) {
+    return jsonResponse({ success: true, data: [] });
+  }
+
+  var isMember = messages.some(function(m) {
+    return m.senderId === userId || m.receiverId === userId;
+  });
+  if (!isMember) {
+    return jsonResponse({ success: false, error: 'You are not part of this conversation.' });
+  }
+
+  messages.sort(function(a, b) {
+    return new Date(a.timestamp) - new Date(b.timestamp);
+  });
+
+  return jsonResponse({
+    success: true,
+    data: messages.map(function(m) { return serializeMessage(m); })
+  });
+}
+
+function handleMarkRead(body) {
+  var conversationId = (body.conversationId || '').trim();
+  var userId = (body.userId || '').trim();
+  if (!conversationId || !userId) {
+    return jsonResponse({ success: false, error: 'conversationId and userId are required.' });
+  }
+
+  var result = getMessageRows();
+  var headers = result.headers;
+  var colIndex = {};
+  headers.forEach(function(h, i) { colIndex[h] = i + 1; });
+
+  var marked = 0;
+  result.rows.forEach(function(m) {
+    if (m.conversationId === conversationId && m.receiverId === userId && !isReadCell(m.read)) {
+      result.sheet.getRange(m.__rowNum, colIndex['read']).setValue('TRUE');
+      marked++;
+    }
+  });
+
+  return jsonResponse({ success: true, data: { marked: marked } });
 }

@@ -166,3 +166,158 @@ export function sanitizeImageUrls(urls: (string | null | undefined)[]): string[]
     .filter((u) => /^https?:\/\/.+/i.test(u))
     .slice(0, 8);
 }
+
+// ------ Wishlist (Phase 2C, per-user) ------
+
+export interface RarivelleWishlistItem {
+  wishlistId: string;
+  userId: string;
+  productId: string;
+  createdAt: string;
+  product: RarivelleProduct;
+}
+
+export async function getWishlist(
+  userId: string
+): Promise<{ success: boolean; data?: RarivelleWishlistItem[]; error?: string }> {
+  const url = `${API_URL}?action=getWishlist&userId=${encodeURIComponent(userId)}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+export async function addWishlist(
+  userId: string,
+  productId: string
+): Promise<{ success: boolean; data?: RarivelleWishlistItem; error?: string }> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'addWishlist', userId, productId }),
+  });
+  return res.json();
+}
+
+export async function removeWishlist(
+  userId: string,
+  productId: string
+): Promise<{ success: boolean; data?: { productId: string }; error?: string }> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'removeWishlist', userId, productId }),
+  });
+  return res.json();
+}
+
+// ------ Seller Profiles (Phase 2D, public) ------
+
+export interface RarivelleSellerProfile {
+  userId: string;
+  name: string;
+  avatarUrl: string;
+  location: string;
+  bio: string;
+  rating: string;
+  verified: boolean;
+  memberSince: string;
+  stats: {
+    activeListings: number;
+    totalValuation: number;
+  };
+  listings: RarivelleProduct[];
+}
+
+export interface ProfileUpdateInput {
+  name?: string;
+  avatarUrl?: string;
+  location?: string;
+  bio?: string;
+}
+
+export async function getSellerProfile(
+  userId: string
+): Promise<{ success: boolean; data?: RarivelleSellerProfile; error?: string }> {
+  const url = `${API_URL}?action=getSellerProfile&userId=${encodeURIComponent(userId)}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+export async function updateProfile(
+  userId: string,
+  updates: ProfileUpdateInput
+): Promise<{ success: boolean; data?: RarivelleSellerProfile; error?: string }> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'updateProfile', userId, ...updates }),
+  });
+  return res.json();
+}
+
+// ------ Messaging (Phase 2E) ------
+
+export interface RarivelleMessage {
+  messageId: string;
+  conversationId: string;
+  senderId: string;
+  receiverId: string;
+  productId: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+}
+
+export interface RarivelleConversation {
+  conversationId: string;
+  productId: string;
+  productTitle: string;
+  productImage: string;
+  counterpartId: string;
+  counterpartName: string;
+  lastMessage: string;
+  lastTimestamp: string;
+  lastSenderId: string;
+  unreadCount: number;
+}
+
+export function buildConversationId(productId: string, buyerId: string): string {
+  return `${productId}|${buyerId}`;
+}
+
+export async function sendMessage(
+  senderId: string,
+  receiverId: string,
+  productId: string,
+  message: string
+): Promise<{ success: boolean; data?: RarivelleMessage; error?: string }> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'sendMessage', senderId, receiverId, productId, message }),
+  });
+  return res.json();
+}
+
+export async function getConversations(
+  userId: string
+): Promise<{ success: boolean; data?: RarivelleConversation[]; error?: string }> {
+  const url = `${API_URL}?action=getConversations&userId=${encodeURIComponent(userId)}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+export async function getMessages(
+  conversationId: string,
+  userId: string
+): Promise<{ success: boolean; data?: RarivelleMessage[]; error?: string }> {
+  const url = `${API_URL}?action=getMessages&conversationId=${encodeURIComponent(conversationId)}&userId=${encodeURIComponent(userId)}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+export async function markRead(
+  conversationId: string,
+  userId: string
+): Promise<{ success: boolean; data?: { marked: number }; error?: string }> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'markRead', conversationId, userId }),
+  });
+  return res.json();
+}

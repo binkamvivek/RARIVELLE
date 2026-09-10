@@ -244,7 +244,7 @@ export const prerender = true;
 
       // Public profile link
       var profileLink = document.getElementById('account-profile-link');
-      if (profileLink) profileLink.setAttribute('href', '/seller/' + user.userId);
+      if (profileLink) profileLink.setAttribute('href', '/seller/' + encodeURIComponent(user.userId));
 
       // --- Edit Profile (Phase 2D, own profile only) ---
       var profileName = document.getElementById('profile-name');
@@ -338,6 +338,19 @@ export const prerender = true;
         }).format(amount);
       }
 
+      function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, function(c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      var FALLBACK_IMG = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+
+      function safeImageUrl(u) {
+        var s = String(u || '').trim();
+        return /^https?:\/\/.+/i.test(s) ? s : FALLBACK_IMG;
+      }
+
       function statusBadge(status) {
         if (status === 'sold') {
           return '<span class="absolute top-3 left-3 px-2 py-0.5 text-[9px] uppercase tracking-widest bg-gold-500 text-noir-950 font-semibold">Sold</span>';
@@ -383,34 +396,36 @@ export const prerender = true;
 
         if (grid) {
           grid.innerHTML = list.map(function(item) {
-            var img = (item.images && item.images[0]) ? item.images[0] : 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+            var img = safeImageUrl(item.images && item.images[0]);
+            var pid = encodeURIComponent(item.productId);
+            var itemHref = '/product/' + pid;
             var statusActions = '';
             if (item.status === 'active') {
               statusActions =
-                '<button type="button" data-status-action="sold" data-product-id="' + item.productId + '" class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer">Mark Sold</button>' +
-                '<button type="button" data-status-action="delisted" data-product-id="' + item.productId + '" class="px-3 py-1 bg-transparent border border-noir-700 text-noir-400 hover:text-red-400 hover:border-red-500/40 text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer">Delist</button>';
+                '<button type="button" data-status-action="sold" data-product-id="' + escapeHtml(item.productId) + '" class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer">Mark Sold</button>' +
+                '<button type="button" data-status-action="delisted" data-product-id="' + escapeHtml(item.productId) + '" class="px-3 py-1 bg-transparent border border-noir-700 text-noir-400 hover:text-red-400 hover:border-red-500/40 text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer">Delist</button>';
             } else {
               statusActions =
-                '<button type="button" data-status-action="active" data-product-id="' + item.productId + '" class="px-3 py-1 bg-noir-950 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer">Relist</button>';
+                '<button type="button" data-status-action="active" data-product-id="' + escapeHtml(item.productId) + '" class="px-3 py-1 bg-noir-950 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer">Relist</button>';
             }
             return [
               '<div class="bg-noir-900 border border-noir-800 hover:border-gold-500/50 transition-all flex flex-col justify-between overflow-hidden">',
                 '<div class="relative aspect-4/3 w-full bg-noir-950 overflow-hidden">',
-                  '<img src="' + img + '" alt="' + item.title + '" class="w-full h-full object-cover" />',
+                  '<img src="' + img + '" alt="' + escapeHtml(item.title) + '" class="w-full h-full object-cover" />',
                   statusBadge(item.status),
                 '</div>',
                 '<div class="p-5 flex flex-col flex-1 justify-between space-y-4">',
                   '<div>',
-                    '<div class="text-[10px] text-gold-400 uppercase tracking-widest mb-1">' + item.category + ' · Circa ' + (item.year || 'Historic') + '</div>',
-                    '<h3 class="font-serif text-base text-ivory-100 line-clamp-2"><a href="/product/' + item.productId + '">' + item.title + '</a></h3>',
-                    '<div class="text-xs text-noir-400 mt-1">Vault: ' + (item.location || 'Your Custody') + '</div>',
+                    '<div class="text-[10px] text-gold-400 uppercase tracking-widest mb-1">' + escapeHtml(item.category) + ' · Circa ' + escapeHtml(item.year || 'Historic') + '</div>',
+                    '<h3 class="font-serif text-base text-ivory-100 line-clamp-2"><a href="' + itemHref + '">' + escapeHtml(item.title) + '</a></h3>',
+                    '<div class="text-xs text-noir-400 mt-1">Vault: ' + escapeHtml(item.location || 'Your Custody') + '</div>',
                   '</div>',
                   '<div class="pt-4 border-t border-noir-800 flex items-center justify-between">',
                     '<div>',
                       '<span class="block text-[9px] uppercase tracking-widest text-noir-400">Listed Price</span>',
                       '<span class="font-serif text-lg text-gold-300 font-light">' + formatUSD(item.price) + '</span>',
                     '</div>',
-                    '<a href="/sell?edit=' + item.productId + '" class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors">Edit</a>',
+                    '<a href="/sell?edit=' + pid + '" class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors">Edit</a>',
                   '</div>',
                   '<div class="flex flex-wrap gap-2">',
                     statusActions,

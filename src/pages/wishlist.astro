@@ -88,6 +88,19 @@ export const prerender = true;
         }).format(amount);
       }
 
+      function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, function(c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      const FALLBACK_IMG = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+
+      function safeImageUrl(u) {
+        const s = String(u || '').trim();
+        return /^https?:\/\/.+/i.test(s) ? s : FALLBACK_IMG;
+      }
+
       const grid = document.getElementById('wishlist-grid');
       const emptyState = document.getElementById('wishlist-empty');
       const countDisplay = document.getElementById('total-count-display');
@@ -142,25 +155,26 @@ export const prerender = true;
         if (valuationDisplay) valuationDisplay.textContent = formatUSD(totalValuation);
 
         grid.innerHTML = savedItems.map(item => {
-          const img = (item.images && item.images[0]) ? item.images[0] : 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+          const img = safeImageUrl(item.images && item.images[0]);
+          const itemHref = '/product/' + encodeURIComponent(item.id);
           return `
             <div class="group relative flex flex-col bg-noir-900 border border-noir-800 hover:border-gold-500/50 transition-all duration-300 overflow-hidden">
               <div class="relative aspect-4/3 w-full overflow-hidden bg-noir-950">
-                <a href="/product/${item.id}" class="block w-full h-full">
-                  <img 
-                    src="${img}" 
-                    alt="${item.title}" 
+                <a href="${itemHref}" class="block w-full h-full">
+                  <img
+                    src="${img}"
+                    alt="${escapeHtml(item.title)}"
                     class="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-500 brightness-90 group-hover:brightness-100"
                   />
                 </a>
                 <div class="absolute top-3 left-3">
                   <span class="inline-block px-2.5 py-1 text-[10px] uppercase tracking-widest font-semibold bg-noir-950/80 text-gold-300 border border-gold-500/30 backdrop-blur-md">
-                    ${item.condition || 'Authenticated'}
+                    ${escapeHtml(item.condition || 'Authenticated')}
                   </span>
                 </div>
-                <button 
-                  type="button" 
-                  data-remove-wishlist="${item.id}" 
+                <button
+                  type="button"
+                  data-remove-wishlist="${escapeHtml(item.id)}"
                   class="absolute top-3 right-3 p-2 rounded-full bg-noir-950/80 text-ivory-300 hover:text-red-400 border border-white/10 hover:border-red-500/40 backdrop-blur-md transition-all cursor-pointer"
                   title="Remove from Folio"
                 >
@@ -173,14 +187,14 @@ export const prerender = true;
               <div class="p-5 flex flex-col flex-1 justify-between space-y-4">
                 <div>
                   <div class="flex items-center justify-between text-[11px] text-gold-400/80 uppercase tracking-widest mb-1">
-                    <span>${item.category}</span>
-                    <span>${item.year || ''}</span>
+                    <span>${escapeHtml(item.category)}</span>
+                    <span>${escapeHtml(item.year || '')}</span>
                   </div>
                   <h3 class="font-serif text-base font-normal text-ivory-100 group-hover:text-gold-300 transition-colors line-clamp-2">
-                    <a href="/product/${item.id}">${item.title}</a>
+                    <a href="${itemHref}">${escapeHtml(item.title)}</a>
                   </h3>
                   <div class="mt-2 text-xs text-noir-400">
-                    Vault: ${item.location || 'Private Custody'}
+                    Vault: ${escapeHtml(item.location || 'Private Custody')}
                   </div>
                 </div>
 
@@ -189,8 +203,8 @@ export const prerender = true;
                     <span class="block text-[9px] uppercase tracking-widest text-noir-400">Valuation</span>
                     <span class="font-serif text-lg text-gold-300 font-light">${formatUSD(item.price)}</span>
                   </div>
-                  <a 
-                    href="/product/${item.id}" 
+                  <a
+                    href="${itemHref}"
                     class="px-3.5 py-1.5 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors"
                   >
                     View Dossier

@@ -390,7 +390,7 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
 
               const mainImg = document.getElementById('main-product-image');
               if (mainImg && found.images && found.images[0]) {
-                mainImg.src = found.images[0];
+                mainImg.src = safeImageUrl(found.images[0]);
               }
 
               const sellerName = document.getElementById('seller-name-link');
@@ -408,8 +408,8 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
               if (specsTable && found.specifications) {
                 specsTable.innerHTML = Object.entries(found.specifications).map(([k, v]) => `
                   <div class="flex justify-between py-1.5 border-b border-noir-800/60">
-                    <span class="text-noir-400">${k}</span>
-                    <span class="text-ivory-200 font-medium text-right">${v}</span>
+                    <span class="text-noir-400">${escapeHtml(k)}</span>
+                    <span class="text-ivory-200 font-medium text-right">${escapeHtml(v)}</span>
                   </div>
                 `).join('');
               }
@@ -417,7 +417,9 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
               // Gallery: rebuild thumbnails for the resolved item
               const thumbStrip = document.getElementById('thumbnail-strip');
               if (thumbStrip && found.images) {
-                thumbStrip.innerHTML = found.images.map((img, idx) => `
+                thumbStrip.innerHTML = found.images.map((rawImg, idx) => {
+                  const img = safeImageUrl(rawImg);
+                  return `
                   <button
                     type="button"
                     data-thumb-src="${img}"
@@ -427,7 +429,8 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
                   >
                     <img src="${img}" alt="View ${idx + 1}" class="w-full h-full object-cover" />
                   </button>
-                `).join('');
+                `;
+                }).join('');
                 bindThumbButtons();
               }
 
@@ -499,8 +502,27 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
       // Default to house state until product data resolves
       setupContact('rarivelle-house', itemId);
 
+      function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, function(c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      const FALLBACK_IMG = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+
+      function safeImageUrl(u) {
+        const s = String(u || '').trim();
+        return /^https?:\/\/.+/i.test(s) ? s : FALLBACK_IMG;
+      }
+
       // Seller card refresh from the live seller profile (best-effort)
       const DEFAULT_SELLER_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop';
+
+      function safeAvatarUrl(u) {
+        const s = String(u || '').trim();
+        return /^https?:\/\/.+/i.test(s) ? s : DEFAULT_SELLER_AVATAR;
+      }
+
       async function refreshSellerCard(sellerId) {
         const avatarEl = document.getElementById('seller-avatar');
         const ratingEl = document.getElementById('seller-rating');
@@ -515,7 +537,7 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
           const json = await res.json();
           if (json.success && json.data) {
             const p = json.data;
-            if (avatarEl) avatarEl.src = p.avatarUrl || DEFAULT_SELLER_AVATAR;
+            if (avatarEl) avatarEl.src = safeAvatarUrl(p.avatarUrl);
             if (ratingEl) ratingEl.textContent = p.rating || '5.0';
             if (transEl) transEl.textContent = String((p.stats && p.stats.activeListings) || 0);
             if (sinceEl) sinceEl.textContent = p.memberSince || '—';

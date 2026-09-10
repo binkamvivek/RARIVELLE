@@ -204,8 +204,9 @@ export const prerender = true;
         }
         if (convEmptyEl) convEmptyEl.classList.add('hidden');
         convListEl.innerHTML = conversations.map(function(c) {
-          const unread = c.unreadCount > 0
-            ? '<span class="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-gold-500 text-noir-950 text-[10px] font-bold">' + c.unreadCount + '</span>'
+          const unreadNum = Number(c.unreadCount) || 0;
+          const unread = unreadNum > 0
+            ? '<span class="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-gold-500 text-noir-950 text-[10px] font-bold">' + unreadNum + '</span>'
             : '';
           const active = c.conversationId === openConvId ? 'bg-gold-500/5 border-l-2 border-l-gold-500' : '';
           return [

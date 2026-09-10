@@ -258,6 +258,19 @@ export const prerender = true;
         }).format(val);
       }
 
+      function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, function(c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      const FALLBACK_IMG = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+
+      function safeImageUrl(u) {
+        const s = String(u || '').trim();
+        return /^https?:\/\/.+/i.test(s) ? s : FALLBACK_IMG;
+      }
+
       const grid = document.getElementById('collectibles-grid');
       const countEl = document.getElementById('results-count');
       const noResults = document.getElementById('no-results');
@@ -301,7 +314,9 @@ export const prerender = true;
         if (countEl) countEl.textContent = String(items.length);
 
         grid.innerHTML = items.map(item => {
-          const primaryImage = (item.images && item.images[0]) ? item.images[0] : 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+          const primaryImage = safeImageUrl(item.images && item.images[0]);
+          const itemHref = '/product/' + encodeURIComponent(item.id);
+          const sellerName = (item.seller && item.seller.name) ? item.seller.name : 'Private Collector';
           const verifiedIcon = item.seller && item.seller.verified ? `
             <svg class="w-3.5 h-3.5 text-gold-400 shrink-0 inline" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
@@ -315,24 +330,24 @@ export const prerender = true;
           return `
             <div class="group relative flex flex-col bg-noir-900/60 border border-noir-800 hover:border-gold-500/50 transition-all duration-300 overflow-hidden">
               <div class="relative aspect-square w-full overflow-hidden bg-noir-950">
-                <a href="/product/${item.id}" class="block w-full h-full">
-                  <img 
-                    src="${primaryImage}" 
-                    alt="${item.title}" 
-                    loading="lazy" 
+                <a href="${itemHref}" class="block w-full h-full">
+                  <img
+                    src="${primaryImage}"
+                    alt="${escapeHtml(item.title)}"
+                    loading="lazy"
                     class="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-700 ease-out brightness-90 group-hover:brightness-100"
                   />
                 </a>
                 <div class="absolute top-3 left-3 flex flex-col gap-1.5 pointer-events-none">
                   <span class="inline-block px-2.5 py-1 text-[10px] uppercase tracking-widest font-semibold bg-noir-950/80 text-gold-300 border border-gold-500/30 backdrop-blur-md">
-                    ${item.condition || 'Authenticated'}
+                    ${escapeHtml(item.condition || 'Authenticated')}
                   </span>
                   ${rareBadge}
                 </div>
-                <button 
-                  type="button" 
-                  data-wishlist-btn="${item.id}" 
-                  data-item-title="${item.title}" 
+                <button
+                  type="button"
+                  data-wishlist-btn="${escapeHtml(item.id)}"
+                  data-item-title="${escapeHtml(item.title)}"
                   aria-label="Save to Wishlist" 
                   class="wishlist-btn absolute top-3 right-3 p-2.5 rounded-full bg-noir-950/70 hover:bg-noir-950 text-ivory-300 hover:text-gold-400 border border-white/10 hover:border-gold-500/50 backdrop-blur-md transition-all duration-200 cursor-pointer z-10"
                 >
@@ -345,18 +360,18 @@ export const prerender = true;
               <div class="p-5 flex flex-col flex-1 justify-between bg-gradient-to-b from-noir-900/40 to-noir-900/90">
                 <div>
                   <div class="flex items-center justify-between text-[11px] text-gold-400/80 uppercase tracking-widest mb-1.5">
-                    <span>${item.category}</span>
-                    <span>${item.year || ''}</span>
+                    <span>${escapeHtml(item.category)}</span>
+                    <span>${escapeHtml(item.year || '')}</span>
                   </div>
                   <h3 class="font-serif text-base font-normal text-ivory-100 group-hover:text-gold-300 transition-colors duration-200 line-clamp-2 leading-snug">
-                    <a href="/product/${item.id}">${item.title}</a>
+                    <a href="${itemHref}">${escapeHtml(item.title)}</a>
                   </h3>
                   <div class="mt-2.5 flex items-center gap-1.5 text-xs text-noir-400">
                     <svg class="w-3.5 h-3.5 text-noir-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <span class="truncate">${item.location || 'Vault Curated'}</span>
+                    <span class="truncate">${escapeHtml(item.location || 'Vault Curated')}</span>
                   </div>
                 </div>
 
@@ -369,8 +384,8 @@ export const prerender = true;
                     <span class="block text-[9px] uppercase tracking-widest text-noir-400">Custodian</span>
                     <div class="flex items-center gap-1 text-xs text-ivory-300/90 font-medium">
                       ${item.sellerId
-                        ? `<a href="/seller/${item.sellerId}" class="truncate max-w-[110px] hover:text-gold-300 transition-colors">${(item.seller && item.seller.name) ? item.seller.name : 'Private Collector'}</a>`
-                        : `<span class="truncate max-w-[110px]">${(item.seller && item.seller.name) ? item.seller.name : 'Private Collector'}</span>`}
+                        ? `<a href="/seller/${encodeURIComponent(item.sellerId)}" class="truncate max-w-[110px] hover:text-gold-300 transition-colors">${escapeHtml(sellerName)}</a>`
+                        : `<span class="truncate max-w-[110px]">${escapeHtml(sellerName)}</span>`}
                       ${verifiedIcon}
                     </div>
                   </div>

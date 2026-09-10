@@ -406,11 +406,17 @@ export const prerender = true;
         }
       }
 
+      function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, function(c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
       function renderThumbnails() {
         if (!thumbsContainer) return;
         thumbsContainer.innerHTML = currentImages().map((src, idx) => `
           <div class="relative group aspect-square bg-noir-950 border border-noir-700 overflow-hidden">
-            <img src="${src}" alt="Upload ${idx + 1}" class="w-full h-full object-cover" />
+            <img src="${escapeHtml(src)}" alt="Upload ${idx + 1}" class="w-full h-full object-cover" />
             <button
               type="button"
               data-remove-thumb="${idx}"
@@ -553,7 +559,7 @@ export const prerender = true;
               if (json.success && json.data) {
                 window.dispatchEvent(new CustomEvent('rarivelle:listing-created', { detail: json.data }));
                 alert(isEdit ? 'Listing updated.' : 'Your rare collectible listing has been published to RARIVELLE!');
-                window.location.href = '/product/' + json.data.productId;
+                window.location.href = '/product/' + encodeURIComponent(json.data.productId);
               } else {
                 alert(json.error || 'Unable to publish. Please try again.');
               }

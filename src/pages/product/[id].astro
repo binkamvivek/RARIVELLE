@@ -7,6 +7,7 @@ import {
   type Collectible 
 } from '../../data/collectibles';
 import { formatCurrency } from '../../utils/store';
+import { API_URL } from '../../lib/api';
 
 export async function getStaticPaths() {
   const items = getAllCollectibles();
@@ -269,19 +270,68 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
   </div>
 
   <!-- Client Script for Gallery, Custom Listings Fallback, and Modal -->
-  <script is:inline>
+  <script is:inline define:vars={{ apiUrl: API_URL }}>
     (function() {
       const container = document.getElementById('product-container');
       const itemId = container ? container.getAttribute('data-item-id') : null;
 
-      // Check if this is a custom user-created listing from localStorage
-      if (itemId) {
+      function normalizeApiProduct(p) {
+        const statusTag = (p.status && p.status !== 'active') ? ' · ' + String(p.status).toUpperCase() : '';
+        return {
+          id: p.productId,
+          title: p.title,
+          category: p.category,
+          year: p.year,
+          condition: (p.condition || 'Authenticated') + statusTag,
+          price: p.price,
+          location: p.location,
+          description: p.description,
+          provenance: 'Private collection consignment. Accompanied by original bill of sale and certificate of authenticity.',
+          images: p.images,
+          seller: { name: p.sellerName || 'Private Collector' },
+          specifications: {
+            'Maker / Brand': p.brand,
+            'Year / Period': p.year,
+            'Condition Grade': p.condition,
+            'Vault Location': p.location,
+            'Listing Status': p.status
+          }
+        };
+      }
+
+      async function findRemote(id) {
         try {
-          const raw = localStorage.getItem('rarivelle_custom_listings');
-          if (raw) {
-            const list = JSON.parse(raw);
-            const found = list.find(x => x.id === itemId);
-            if (found) {
+          const res = await fetch(apiUrl + '?action=getProduct&productId=' + encodeURIComponent(id));
+          const json = await res.json();
+          if (json.success && json.data) return normalizeApiProduct(json.data);
+        } catch (err) {
+          console.error(err);
+        }
+        return null;
+      }
+
+      // Check localStorage first, then the Products API (Phase 2B)
+      if (itemId) {
+        (function() {
+          try {
+            const raw = localStorage.getItem('rarivelle_custom_listings');
+            if (raw) {
+              const list = JSON.parse(raw);
+              const localFound = list.find(x => x.id === itemId);
+              if (localFound) {
+                populate(localFound);
+                return;
+              }
+            }
+          } catch (err) {
+            console.error(err);
+          }
+          findRemote(itemId).then(function(found) {
+            if (found) populate(found);
+          });
+        })();
+
+        function populate(found) {
               // Update page content dynamically
               document.title = `${found.title} | RARIVELLE`;
               const titleEl = document.getElementById('product-title');
@@ -331,10 +381,6 @@ const similarItems = getAllCollectibles().filter(i => i.id !== id).slice(0, 3);
                   </div>
                 `).join('');
               }
-            }
-          }
-        } catch (err) {
-          console.error(err);
         }
       }
 

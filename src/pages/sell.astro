@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { CATEGORIES } from '../data/collectibles';
+import { API_URL } from '../lib/api';
 ---
 
 <Layout 
@@ -34,27 +35,16 @@ import { CATEGORIES } from '../data/collectibles';
               Photography & Archive Plates *
             </label>
             <p class="text-[11px] text-noir-400 mb-3">
-              Upload clear, high-resolution photographs showing hallmarks, condition, and full profiles.
+              Paste direct image URLs (https) showing hallmarks, condition, and full profiles — one per line.
             </p>
 
-            <!-- Drag/Drop or Pick Area -->
-            <div 
-              id="drop-zone"
-              class="border-2 border-dashed border-noir-700 hover:border-gold-500/60 bg-noir-950/60 p-6 text-center cursor-pointer transition-colors group"
-            >
-              <input 
-                type="file" 
-                id="image-file-input" 
-                multiple 
-                accept="image/*" 
-                class="hidden" 
-              />
-              <svg class="w-8 h-8 text-noir-500 group-hover:text-gold-400 mx-auto mb-2 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <div class="text-xs text-ivory-200 font-medium">Click to select photos or drag & drop files</div>
-              <div class="text-[10px] text-noir-500 mt-1">PNG, JPG, WebP up to 10MB</div>
-            </div>
+            <!-- Image URLs -->
+            <textarea
+              id="image-urls-input"
+              rows="3"
+              placeholder="https://example.com/photo-1.jpg&#10;https://example.com/photo-2.jpg"
+              class="w-full bg-noir-950 border border-noir-700 p-3.5 text-xs text-ivory-100 placeholder-noir-500 focus:outline-none focus:border-gold-500 transition-colors leading-relaxed"
+            ></textarea>
 
             <!-- Quick sample photos button for instant luxury testing -->
             <div class="mt-2.5 flex items-center justify-between text-xs">
@@ -308,22 +298,45 @@ import { CATEGORIES } from '../data/collectibles';
     </div>
   </div>
 
-  <!-- Client-side script for Image uploads, Live preview sync & Publishing -->
-  <script is:inline>
+  <!-- Client-side script for Image URLs, Live preview sync & Publishing (Phase 2B API) -->
+  <script is:inline define:vars={{ apiUrl: API_URL }}>
     (function() {
-      let uploadedImages = [];
+      // --- Auth gate (Phase 2A session) ---
+      let currentUser = null;
+      try {
+        const rawUser = localStorage.getItem('rarivelle_user');
+        currentUser = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {}
+      if (!currentUser || !currentUser.userId) {
+        window.location.href = '/login';
+        return;
+      }
 
-      // Sample fallback images
+      // --- Edit mode (?edit=productId) ---
+      const editId = new URLSearchParams(window.location.search).get('edit');
+
+      // Sample fallback images (URLs only — never data-URL/base64)
       const samplePhotos = [
         'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=1200&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=1200&auto=format&fit=crop',
       ];
 
-      const dropZone = document.getElementById('drop-zone');
-      const fileInput = document.getElementById('image-file-input');
+      const urlsInput = document.getElementById('image-urls-input');
       const thumbsContainer = document.getElementById('uploaded-thumbnails');
       const sampleBtn = document.getElementById('load-sample-imgs-btn');
+
+      function readUrlList() {
+        const raw = urlsInput ? urlsInput.value : '';
+        return raw.split(/[\n,]+/).map(function(s) { return s.trim(); }).filter(function(s) {
+          return /^https?:\/\/.+/i.test(s);
+        }).slice(0, 8);
+      }
+
+      function currentImages() {
+        const urls = readUrlList();
+        return urls.length > 0 ? urls : [];
+      }
 
       // Form inputs
       const titleInput = document.getElementById('form-title');
@@ -378,19 +391,20 @@ import { CATEGORIES } from '../data/collectibles';
         if (previewDesc && descInput) {
           previewDesc.textContent = descInput.value || 'Collector description will appear here as you type...';
         }
-        if (previewImg && uploadedImages.length > 0) {
-          previewImg.src = uploadedImages[0];
+        const liveUrls = currentImages();
+        if (previewImg && liveUrls.length > 0) {
+          previewImg.src = liveUrls[0];
         }
       }
 
       function renderThumbnails() {
         if (!thumbsContainer) return;
-        thumbsContainer.innerHTML = uploadedImages.map((src, idx) => `
+        thumbsContainer.innerHTML = currentImages().map((src, idx) => `
           <div class="relative group aspect-square bg-noir-950 border border-noir-700 overflow-hidden">
             <img src="${src}" alt="Upload ${idx + 1}" class="w-full h-full object-cover" />
-            <button 
-              type="button" 
-              data-remove-thumb="${idx}" 
+            <button
+              type="button"
+              data-remove-thumb="${idx}"
               class="absolute top-1 right-1 w-5 h-5 rounded-full bg-noir-950/80 text-white hover:text-red-400 flex items-center justify-center text-xs"
             >
               &times;
@@ -402,58 +416,27 @@ import { CATEGORIES } from '../data/collectibles';
         thumbsContainer.querySelectorAll('[data-remove-thumb]').forEach(btn => {
           btn.addEventListener('click', (e) => {
             const idx = Number(btn.getAttribute('data-remove-thumb'));
-            uploadedImages.splice(idx, 1);
+            const urls = currentImages();
+            urls.splice(idx, 1);
+            if (urlsInput) urlsInput.value = urls.join('\n');
             renderThumbnails();
             updatePreview();
           });
         });
       }
 
-      // Drop zone click
-      if (dropZone && fileInput) {
-        dropZone.addEventListener('click', () => fileInput.click());
-
-        dropZone.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          dropZone.classList.add('border-gold-500');
-        });
-        dropZone.addEventListener('dragleave', () => {
-          dropZone.classList.remove('border-gold-500');
-        });
-        dropZone.addEventListener('drop', (e) => {
-          e.preventDefault();
-          dropZone.classList.remove('border-gold-500');
-          if (e.dataTransfer && e.dataTransfer.files) {
-            handleFiles(e.dataTransfer.files);
-          }
-        });
-
-        fileInput.addEventListener('change', () => {
-          if (fileInput.files) {
-            handleFiles(fileInput.files);
-          }
+      // Image URL textarea -> live thumbs + preview
+      if (urlsInput) {
+        urlsInput.addEventListener('input', () => {
+          renderThumbnails();
+          updatePreview();
         });
       }
 
-      function handleFiles(files) {
-        Array.from(files).forEach(file => {
-          if (!file.type.startsWith('image/')) return;
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            if (e.target && e.target.result) {
-              uploadedImages.push(e.target.result);
-              renderThumbnails();
-              updatePreview();
-            }
-          };
-          reader.readAsDataURL(file);
-        });
-      }
-
-      // Sample images button
+      // Sample images button (fills URL list)
       if (sampleBtn) {
         sampleBtn.addEventListener('click', () => {
-          uploadedImages = [...samplePhotos];
+          if (urlsInput) urlsInput.value = samplePhotos.join('\n');
           renderThumbnails();
           updatePreview();
         });
@@ -467,65 +450,101 @@ import { CATEGORIES } from '../data/collectibles';
         }
       });
 
-      // Submit Form & Publish
+      // --- Edit mode: preload owned listing ---
+      const publishBtn = document.getElementById('publish-btn');
+      if (editId) {
+        if (publishBtn) publishBtn.textContent = 'Save Changes to Listing';
+        fetch(apiUrl + '?action=getProduct&productId=' + encodeURIComponent(editId))
+          .then(function(res) { return res.json(); })
+          .then(function(json) {
+            if (!json.success || !json.data) {
+              alert('Listing not found.');
+              window.location.href = '/account';
+              return;
+            }
+            const p = json.data;
+            if (p.sellerId !== currentUser.userId) {
+              alert('You do not own this listing.');
+              window.location.href = '/account';
+              return;
+            }
+            if (titleInput) titleInput.value = p.title || '';
+            if (categoryInput) categoryInput.value = p.category || '';
+            if (brandInput) brandInput.value = p.brand || '';
+            if (priceInput) priceInput.value = p.price || '';
+            if (yearInput) yearInput.value = p.year || '';
+            if (conditionInput) conditionInput.value = p.condition || '';
+            if (locationInput) locationInput.value = p.location || '';
+            if (descInput) descInput.value = p.description || '';
+            if (urlsInput && p.images) urlsInput.value = p.images.join('\n');
+            renderThumbnails();
+            updatePreview();
+          })
+          .catch(function() {
+            alert('Unable to load listing. Please try again.');
+            window.location.href = '/account';
+          });
+      }
+
+      function setPublishing(busy, label) {
+        if (!publishBtn) return;
+        publishBtn.disabled = busy;
+        publishBtn.textContent = busy ? 'Publishing…' : label;
+      }
+
+      // Submit Form & Publish via Products API (Phase 2B)
       if (form) {
         form.addEventListener('submit', (e) => {
           e.preventDefault();
 
-          const imagesToSave = uploadedImages.length > 0 ? uploadedImages : [
-            'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop'
-          ];
+          const title = titleInput.value.trim();
+          const price = Number(priceInput.value);
+          if (!title || !price || price <= 0) {
+            alert('Please provide a title and a valid valuation.');
+            return;
+          }
 
-          const newId = 'rv-custom-' + Date.now();
-          const newListing = {
-            id: newId,
-            title: titleInput.value.trim(),
+          const imagesToSave = currentImages();
+          const provenance = provenanceInput ? provenanceInput.value.trim() : '';
+          let description = descInput.value.trim();
+          if (provenance) description += '\n\nProvenance: ' + provenance;
+
+          const payload = {
+            sellerId: currentUser.userId,
+            title: title,
             category: categoryInput.value,
             brand: brandInput.value.trim(),
-            price: Number(priceInput.value),
+            price: price,
             year: yearInput.value.trim(),
             condition: conditionInput.value,
             location: locationInput.value.trim(),
-            description: descInput.value.trim(),
-            provenance: provenanceInput ? provenanceInput.value.trim() : 'Direct collector submission with verified provenance documents.',
-            images: imagesToSave,
-            seller: {
-              name: 'You (Verified Collector)',
-              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
-              rating: 5.0,
-              reviewsCount: 1,
-              verified: true,
-              memberSince: '2026',
-              location: locationInput.value.trim(),
-              totalListings: 1
-            },
-            specifications: {
-              'Maker / Brand': brandInput.value.trim(),
-              'Year / Period': yearInput.value.trim(),
-              'Condition Grade': conditionInput.value,
-              'Vault Location': locationInput.value.trim(),
-              'Certification': 'Private Member Certified Listing'
-            },
-            recentlyListed: true,
-            featured: false
+            description: description,
+            images: imagesToSave
           };
 
-          try {
-            const raw = localStorage.getItem('rarivelle_custom_listings');
-            const list = raw ? JSON.parse(raw) : [];
-            list.unshift(newListing);
-            localStorage.setItem('rarivelle_custom_listings', JSON.stringify(list));
-            
-            // Dispatch event for other listeners
-            window.dispatchEvent(new CustomEvent('rarivelle:listing-created', { detail: newListing }));
+          const isEdit = !!editId;
+          setPublishing(true);
 
-            alert('Your rare collectible listing has been published to RARIVELLE!');
-            window.location.href = `/product/${newId}`;
-          } catch (err) {
-            console.error('Failed to save listing', err);
-            alert('Listing published successfully! Navigating to marketplace.');
-            window.location.href = '/discover';
-          }
+          const request = isEdit
+            ? fetch(apiUrl, { method: 'POST', body: JSON.stringify({ action: 'updateProduct', productId: editId, ...payload }) })
+            : fetch(apiUrl, { method: 'POST', body: JSON.stringify({ action: 'createProduct', ...payload }) });
+
+          request
+            .then(function(res) { return res.json(); })
+            .then(function(json) {
+              setPublishing(false, isEdit ? 'Save Changes to Listing' : 'Publish Listing to Salon');
+              if (json.success && json.data) {
+                window.dispatchEvent(new CustomEvent('rarivelle:listing-created', { detail: json.data }));
+                alert(isEdit ? 'Listing updated.' : 'Your rare collectible listing has been published to RARIVELLE!');
+                window.location.href = '/product/' + json.data.productId;
+              } else {
+                alert(json.error || 'Unable to publish. Please try again.');
+              }
+            })
+            .catch(function() {
+              setPublishing(false, isEdit ? 'Save Changes to Listing' : 'Publish Listing to Salon');
+              alert('Unable to reach the server. Please try again.');
+            });
         });
       }
 

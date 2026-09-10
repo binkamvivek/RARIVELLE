@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { API_URL } from '../lib/api';
 ---
 
 <Layout 
@@ -147,8 +148,8 @@ import Layout from '../layouts/Layout.astro';
 
   </div>
 
-  <!-- Client-side script to load user's custom listings + auth gate -->
-  <script is:inline>
+  <!-- Client-side script to load user's listings from the Products API + auth gate -->
+  <script is:inline define:vars={{ apiUrl: API_URL }}>
     (function() {
       // --- Auth Gate ---
       var rawUser = localStorage.getItem('rarivelle_user');
@@ -173,7 +174,7 @@ import Layout from '../layouts/Layout.astro';
         window.location.href = '/';
       });
 
-      // --- Listings ---
+      // --- Listings (Phase 2B: Products API, history preserved via status) ---
       var grid = document.getElementById('user-listings-grid');
       var emptyState = document.getElementById('no-user-listings');
       var countEl = document.getElementById('account-listings-count');
@@ -187,15 +188,33 @@ import Layout from '../layouts/Layout.astro';
         }).format(amount);
       }
 
-      function loadListings() {
-        var list = [];
-        try {
-          var raw = localStorage.getItem('rarivelle_custom_listings');
-          if (raw) list = JSON.parse(raw);
-        } catch (e) {
-          list = [];
+      function statusBadge(status) {
+        if (status === 'sold') {
+          return '<span class="absolute top-3 left-3 px-2 py-0.5 text-[9px] uppercase tracking-widest bg-gold-500 text-noir-950 font-semibold">Sold</span>';
         }
+        if (status === 'delisted') {
+          return '<span class="absolute top-3 left-3 px-2 py-0.5 text-[9px] uppercase tracking-widest bg-noir-950/80 text-noir-400 border border-noir-700 font-semibold backdrop-blur-sm">Delisted</span>';
+        }
+        return '<span class="absolute top-3 left-3 px-2 py-0.5 text-[9px] uppercase tracking-widest bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 font-semibold backdrop-blur-sm">Active in Salon</span>';
+      }
 
+      function setStatus(productId, status, confirmMsg) {
+        if (confirmMsg && !confirm(confirmMsg)) return;
+        fetch(apiUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'updateProduct', productId: productId, sellerId: user.userId, status: status })
+        }).then(function(res) { return res.json(); }).then(function(json) {
+          if (json.success) {
+            loadListings();
+          } else {
+            alert(json.error || 'Unable to update listing.');
+          }
+        }).catch(function() {
+          alert('Unable to reach the server. Please try again.');
+        });
+      }
+
+      function renderListings(list) {
         if (countEl) countEl.textContent = String(list.length);
 
         if (list.length === 0) {
@@ -207,25 +226,33 @@ import Layout from '../layouts/Layout.astro';
 
         if (emptyState) emptyState.classList.add('hidden');
 
-        var total = list.reduce(function(acc, item) { return acc + (Number(item.price) || 0); }, 0);
-        if (valEl) valEl.textContent = formatUSD(total);
+        var activeTotal = list.reduce(function(acc, item) {
+          return acc + (item.status === 'active' ? (Number(item.price) || 0) : 0);
+        }, 0);
+        if (valEl) valEl.textContent = formatUSD(activeTotal);
 
         if (grid) {
-          grid.innerHTML = list.map(function(item, idx) {
+          grid.innerHTML = list.map(function(item) {
             var img = (item.images && item.images[0]) ? item.images[0] : 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+            var statusActions = '';
+            if (item.status === 'active') {
+              statusActions =
+                '<button type="button" data-status-action="sold" data-product-id="' + item.productId + '" class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer">Mark Sold</button>' +
+                '<button type="button" data-status-action="delisted" data-product-id="' + item.productId + '" class="px-3 py-1 bg-transparent border border-noir-700 text-noir-400 hover:text-red-400 hover:border-red-500/40 text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer">Delist</button>';
+            } else {
+              statusActions =
+                '<button type="button" data-status-action="active" data-product-id="' + item.productId + '" class="px-3 py-1 bg-noir-950 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors cursor-pointer">Relist</button>';
+            }
             return [
               '<div class="bg-noir-900 border border-noir-800 hover:border-gold-500/50 transition-all flex flex-col justify-between overflow-hidden">',
                 '<div class="relative aspect-4/3 w-full bg-noir-950 overflow-hidden">',
                   '<img src="' + img + '" alt="' + item.title + '" class="w-full h-full object-cover" />',
-                  '<span class="absolute top-3 left-3 px-2 py-0.5 text-[9px] uppercase tracking-widest bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 font-semibold backdrop-blur-sm">Active in Salon</span>',
-                  '<button type="button" data-delete-custom="' + idx + '" class="absolute top-3 right-3 p-1.5 bg-noir-950/80 text-noir-400 hover:text-red-400 border border-white/10 rounded-full cursor-pointer" title="Delist Piece">',
-                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>',
-                  '</button>',
+                  statusBadge(item.status),
                 '</div>',
                 '<div class="p-5 flex flex-col flex-1 justify-between space-y-4">',
                   '<div>',
                     '<div class="text-[10px] text-gold-400 uppercase tracking-widest mb-1">' + item.category + ' · Circa ' + (item.year || 'Historic') + '</div>',
-                    '<h3 class="font-serif text-base text-ivory-100 line-clamp-2"><a href="/product/' + item.id + '">' + item.title + '</a></h3>',
+                    '<h3 class="font-serif text-base text-ivory-100 line-clamp-2"><a href="/product/' + item.productId + '">' + item.title + '</a></h3>',
                     '<div class="text-xs text-noir-400 mt-1">Vault: ' + (item.location || 'Your Custody') + '</div>',
                   '</div>',
                   '<div class="pt-4 border-t border-noir-800 flex items-center justify-between">',
@@ -233,25 +260,47 @@ import Layout from '../layouts/Layout.astro';
                       '<span class="block text-[9px] uppercase tracking-widest text-noir-400">Listed Price</span>',
                       '<span class="font-serif text-lg text-gold-300 font-light">' + formatUSD(item.price) + '</span>',
                     '</div>',
-                    '<a href="/product/' + item.id + '" class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors">View Live Dossier &rarr;</a>',
+                    '<a href="/sell?edit=' + item.productId + '" class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors">Edit</a>',
+                  '</div>',
+                  '<div class="flex flex-wrap gap-2">',
+                    statusActions,
                   '</div>',
                 '</div>',
               '</div>'
             ].join('');
           }).join('');
 
-          // Attach delete listener
-          grid.querySelectorAll('[data-delete-custom]').forEach(function(btn) {
+          // Attach status listeners (soft status changes only — rows are never deleted)
+          grid.querySelectorAll('[data-status-action]').forEach(function(btn) {
             btn.addEventListener('click', function() {
-              var idx = Number(btn.getAttribute('data-delete-custom'));
-              if (confirm('Are you sure you wish to withdraw this piece from the salon?')) {
-                list.splice(idx, 1);
-                localStorage.setItem('rarivelle_custom_listings', JSON.stringify(list));
-                loadListings();
+              var pid = btn.getAttribute('data-product-id');
+              var next = btn.getAttribute('data-status-action');
+              if (next === 'delisted') {
+                setStatus(pid, next, 'Withdraw this piece from the salon? History is preserved.');
+              } else if (next === 'sold') {
+                setStatus(pid, next, 'Mark this piece as sold?');
+              } else {
+                setStatus(pid, next, null);
               }
             });
           });
         }
+      }
+
+      function loadListings() {
+        if (grid) grid.innerHTML = '<p class="text-xs text-noir-400 col-span-full">Loading your portfolio…</p>';
+        fetch(apiUrl + '?action=getProducts&sellerId=' + encodeURIComponent(user.userId) + '&status=all')
+          .then(function(res) { return res.json(); })
+          .then(function(json) {
+            if (json.success && Array.isArray(json.data)) {
+              renderListings(json.data);
+            } else {
+              renderListings([]);
+            }
+          })
+          .catch(function() {
+            if (grid) grid.innerHTML = '<p class="text-xs text-red-400 col-span-full">Unable to load listings. Please refresh.</p>';
+          });
       }
 
       loadListings();

@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { CATEGORIES, INITIAL_COLLECTIBLES } from '../data/collectibles';
+import { API_URL } from '../lib/api';
 ---
 
 <Layout 
@@ -194,10 +195,45 @@ import { CATEGORIES, INITIAL_COLLECTIBLES } from '../data/collectibles';
   </div>
 
   <!-- Client-side Search, Filter & Render Script -->
-  <script is:inline define:vars={{ initialItems: INITIAL_COLLECTIBLES }}>
+  <script is:inline define:vars={{ initialItems: INITIAL_COLLECTIBLES, apiUrl: API_URL }}>
     (function() {
-      // Merge with custom listings in localStorage
+      // Phase 2B: live catalog from the Products sheet (active only).
+      // Falls back to local + static items when offline or pre-seed.
+      let apiItems = null;
+
+      function toCardItem(p) {
+        return {
+          id: p.productId,
+          title: p.title,
+          category: p.category,
+          brand: p.brand,
+          price: Number(p.price) || 0,
+          year: p.year,
+          condition: p.condition,
+          location: p.location,
+          description: p.description,
+          images: p.images,
+          seller: { name: p.sellerName || 'Private Collector', verified: true },
+          rareFind: false,
+          featured: false,
+          recentlyListed: true
+        };
+      }
+
+      async function loadApiItems() {
+        try {
+          const res = await fetch(apiUrl + '?action=getProducts&status=active');
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            apiItems = json.data.map(toCardItem);
+          }
+        } catch (e) {
+          apiItems = null;
+        }
+      }
+
       function getMergedItems() {
+        if (apiItems) return apiItems;
         let custom = [];
         try {
           const raw = localStorage.getItem('rarivelle_custom_listings');
@@ -446,8 +482,9 @@ import { CATEGORIES, INITIAL_COLLECTIBLES } from '../data/collectibles';
         });
       }
 
-      // Initial run
+      // Initial run (API first, fallback renders on failure)
       applyFilters();
+      loadApiItems().then(applyFilters);
     })();
   </script>
 </Layout>

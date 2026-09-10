@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { INITIAL_COLLECTIBLES } from '../data/collectibles';
+import { API_URL } from '../lib/api';
 ---
 
 <Layout 
@@ -66,8 +67,36 @@ import { INITIAL_COLLECTIBLES } from '../data/collectibles';
   </div>
 
   <!-- Client-side Wishlist Engine -->
-  <script is:inline define:vars={{ staticItems: INITIAL_COLLECTIBLES }}>
+  <script is:inline define:vars={{ staticItems: INITIAL_COLLECTIBLES, apiUrl: API_URL }}>
     (function() {
+      // Phase 2B: also resolve live Products API items (deduped by id, API wins).
+      let apiCache = null;
+      let apiLoaded = false;
+
+      async function fetchApiItems() {
+        if (apiLoaded) return apiCache;
+        apiLoaded = true;
+        try {
+          const res = await fetch(apiUrl + '?action=getProducts&status=active');
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data)) {
+            apiCache = json.data.map(p => ({
+              id: p.productId,
+              title: p.title,
+              category: p.category,
+              price: Number(p.price) || 0,
+              condition: p.condition,
+              location: p.location,
+              year: p.year,
+              images: p.images
+            }));
+          }
+        } catch (e) {
+          apiCache = [];
+        }
+        return apiCache || [];
+      }
+
       function getAllAvailableItems() {
         let custom = [];
         try {
@@ -75,6 +104,11 @@ import { INITIAL_COLLECTIBLES } from '../data/collectibles';
           if (raw) custom = JSON.parse(raw);
         } catch (e) {}
         return [...custom, ...staticItems];
+      }
+
+      function getMergedWithApi(apiItems) {
+        const seen = new Set(apiItems.map(i => i.id));
+        return [...apiItems, ...getAllAvailableItems().filter(i => !seen.has(i.id))];
       }
 
       function formatUSD(amount) {
@@ -91,7 +125,7 @@ import { INITIAL_COLLECTIBLES } from '../data/collectibles';
       const valuationDisplay = document.getElementById('total-valuation-display');
       const summaryCard = document.getElementById('wishlist-summary-card');
 
-      function renderWishlist() {
+      async function renderWishlist() {
         if (!grid) return;
 
         let wishlistIds = [];
@@ -102,7 +136,8 @@ import { INITIAL_COLLECTIBLES } from '../data/collectibles';
           wishlistIds = [];
         }
 
-        const allItems = getAllAvailableItems();
+        const apiItems = await fetchApiItems();
+        const allItems = getMergedWithApi(apiItems);
         const savedItems = allItems.filter(item => wishlistIds.includes(item.id));
 
         if (countDisplay) countDisplay.textContent = String(savedItems.length);

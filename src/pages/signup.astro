@@ -1,0 +1,198 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Create Account | RARIVELLE"
+  description="Join RARIVELLE to access the premier marketplace for rare horology, numismatics, signed first editions, and museum-grade antiquities."
+>
+  <div class="min-h-[80vh] flex items-center justify-center px-4 py-16">
+    <div class="w-full max-w-md">
+
+      <!-- Header -->
+      <div class="text-center mb-10">
+        <p class="text-[10px] uppercase tracking-[0.3em] text-gold-400 font-semibold mb-3">Join the Salon</p>
+        <h1 class="font-serif text-3xl sm:text-4xl text-ivory-100 font-light mb-2">Create Account</h1>
+        <p class="text-xs text-noir-400 tracking-wide">Gain access to rare collectibles and your private vault</p>
+      </div>
+
+      <!-- Card -->
+      <div class="bg-noir-900 border border-noir-800 p-8 sm:p-10 relative overflow-hidden">
+        <!-- Decorative glow -->
+        <div class="absolute -right-12 -top-12 w-40 h-40 bg-gold-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+        <!-- Error Message -->
+        <div
+          id="signup-error"
+          class="hidden mb-6 px-4 py-3 border border-red-500/30 bg-red-950/40 text-red-400 text-xs tracking-wide"
+          role="alert"
+        ></div>
+
+        <!-- Success Message -->
+        <div
+          id="signup-success"
+          class="hidden mb-6 px-4 py-3 border border-emerald-500/30 bg-emerald-950/40 text-emerald-400 text-xs tracking-wide"
+          role="status"
+        ></div>
+
+        <!-- Form -->
+        <form id="signup-form" class="space-y-6" novalidate>
+
+          <!-- Name -->
+          <div class="space-y-1.5">
+            <label for="signup-name" class="block text-[10px] uppercase tracking-[0.2em] text-ivory-300/70 font-semibold">
+              Full Name
+            </label>
+            <input
+              id="signup-name"
+              type="text"
+              name="name"
+              autocomplete="name"
+              required
+              placeholder="Your name or collection name"
+              class="w-full bg-noir-950 border border-noir-700 text-ivory-100 text-sm px-4 py-3 placeholder:text-noir-500 focus:outline-none focus:border-gold-500/60 transition-colors duration-200"
+            />
+          </div>
+
+          <!-- Email -->
+          <div class="space-y-1.5">
+            <label for="signup-email" class="block text-[10px] uppercase tracking-[0.2em] text-ivory-300/70 font-semibold">
+              Email Address
+            </label>
+            <input
+              id="signup-email"
+              type="email"
+              name="email"
+              autocomplete="email"
+              required
+              placeholder="collector@example.com"
+              class="w-full bg-noir-950 border border-noir-700 text-ivory-100 text-sm px-4 py-3 placeholder:text-noir-500 focus:outline-none focus:border-gold-500/60 transition-colors duration-200"
+            />
+          </div>
+
+          <!-- Password -->
+          <div class="space-y-1.5">
+            <label for="signup-password" class="block text-[10px] uppercase tracking-[0.2em] text-ivory-300/70 font-semibold">
+              Password
+            </label>
+            <input
+              id="signup-password"
+              type="password"
+              name="password"
+              autocomplete="new-password"
+              required
+              placeholder="At least 6 characters"
+              class="w-full bg-noir-950 border border-noir-700 text-ivory-100 text-sm px-4 py-3 placeholder:text-noir-500 focus:outline-none focus:border-gold-500/60 transition-colors duration-200"
+            />
+            <p class="text-[10px] text-noir-500 tracking-wide">Minimum 6 characters</p>
+          </div>
+
+          <!-- Submit -->
+          <button
+            id="signup-btn"
+            type="submit"
+            class="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gold-500 hover:bg-gold-400 text-noir-950 text-xs uppercase tracking-[0.2em] font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <span id="signup-btn-text">Create Account</span>
+            <svg
+              id="signup-spinner"
+              class="hidden w-4 h-4 animate-spin"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+          </button>
+
+        </form>
+
+        <!-- Divider -->
+        <div class="mt-8 pt-6 border-t border-noir-800 text-center">
+          <p class="text-xs text-noir-500 tracking-wide">
+            Already have an account?
+            <a href="/login" class="text-gold-400 hover:text-gold-300 underline underline-offset-4 transition-colors ml-1">
+              Sign In
+            </a>
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { API_URL, setCurrentUser } from '../lib/api.ts';
+
+  const form = document.getElementById('signup-form') as HTMLFormElement;
+  const btn = document.getElementById('signup-btn') as HTMLButtonElement;
+  const btnText = document.getElementById('signup-btn-text')!;
+  const spinner = document.getElementById('signup-spinner')!;
+  const errorEl = document.getElementById('signup-error')!;
+  const successEl = document.getElementById('signup-success')!;
+
+  function setLoading(loading: boolean) {
+    btn.disabled = loading;
+    btnText.textContent = loading ? 'Creating Account…' : 'Create Account';
+    spinner.classList.toggle('hidden', !loading);
+  }
+
+  function showError(msg: string) {
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+    successEl.classList.add('hidden');
+  }
+
+  function showSuccess(msg: string) {
+    successEl.textContent = msg;
+    successEl.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+  }
+
+  function hideMessages() {
+    errorEl.classList.add('hidden');
+    successEl.classList.add('hidden');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideMessages();
+
+    const name = (document.getElementById('signup-name') as HTMLInputElement).value.trim();
+    const email = (document.getElementById('signup-email') as HTMLInputElement).value.trim();
+    const password = (document.getElementById('signup-password') as HTMLInputElement).value.trim();
+
+    if (!name || !email || !password) {
+      showError('Please fill in all fields.');
+      return;
+    }
+    if (password.length < 6) {
+      showError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'signup', name, email, password }),
+      });
+      const json = await res.json();
+
+      if (json.success && json.data) {
+        setCurrentUser(json.data);
+        showSuccess('Account created! Redirecting to your vault…');
+        window.dispatchEvent(new CustomEvent('rarivelle:auth-updated'));
+        setTimeout(() => { window.location.href = '/account'; }, 1200);
+      } else {
+        showError(json.error || 'Something went wrong. Please try again.');
+      }
+    } catch {
+      showError('Unable to reach the server. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  });
+</script>

@@ -88,17 +88,35 @@ const navLinks = [
           </span>
         </a>
 
-        <!-- Account / Vault link -->
-        <a 
-          href="/account" 
-          aria-label="Collector Account"
-          class="hidden sm:flex text-ivory-300/70 hover:text-gold-400 transition-colors duration-200 p-2"
-          title="The Vault"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </a>
+        <!-- Auth Widget (logged out: sign in link; logged in: name + sign out) -->
+        <div id="nav-auth-widget" class="hidden sm:flex items-center gap-3">
+          <!-- Logged-out state -->
+          <a
+            id="nav-signin-link"
+            href="/login"
+            class="text-xs uppercase tracking-[0.18em] font-medium text-ivory-300/80 hover:text-gold-400 transition-colors duration-200 px-2 py-1"
+          >
+            Sign In
+          </a>
+
+          <!-- Logged-in state (hidden by default, shown via JS) -->
+          <div id="nav-user-info" class="hidden items-center gap-3">
+            <a
+              href="/account"
+              id="nav-user-name"
+              class="text-xs uppercase tracking-[0.15em] font-semibold text-gold-400 hover:text-gold-300 transition-colors duration-200 truncate max-w-[120px]"
+              title="Your Vault"
+            ></a>
+            <button
+              id="nav-signout-btn"
+              type="button"
+              class="text-[10px] uppercase tracking-[0.15em] text-noir-400 hover:text-red-400 transition-colors duration-200 border border-noir-700 hover:border-red-500/40 px-2.5 py-1"
+              title="Sign Out"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
 
         <!-- CTA Button -->
         <a 
@@ -147,6 +165,7 @@ const navLinks = [
 </header>
 
 <script>
+  // ------ Wishlist badge ------
   function updateNavWishlist() {
     try {
       const stored = localStorage.getItem('rarivelle_wishlist');
@@ -167,7 +186,46 @@ const navLinks = [
     }
   }
 
-  // Toggle mobile menu
+  // ------ Auth state ------
+  function updateNavAuth() {
+    try {
+      const raw = localStorage.getItem('rarivelle_user');
+      const user = raw ? JSON.parse(raw) : null;
+
+      const widget = document.getElementById('nav-auth-widget');
+      const signinLink = document.getElementById('nav-signin-link');
+      const userInfo = document.getElementById('nav-user-info');
+      const userNameEl = document.getElementById('nav-user-name');
+
+      if (!widget) return;
+      widget.classList.remove('hidden');
+      widget.classList.add('flex');
+
+      if (user && user.name) {
+        // Logged in
+        signinLink?.classList.add('hidden');
+        userInfo?.classList.remove('hidden');
+        userInfo?.classList.add('flex');
+        if (userNameEl) userNameEl.textContent = user.name.split(' ')[0]; // First name only
+      } else {
+        // Logged out
+        signinLink?.classList.remove('hidden');
+        userInfo?.classList.add('hidden');
+        userInfo?.classList.remove('flex');
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+
+  function handleSignOut() {
+    localStorage.removeItem('rarivelle_user');
+    window.dispatchEvent(new CustomEvent('rarivelle:auth-updated'));
+    updateNavAuth();
+    window.location.href = '/';
+  }
+
+  // ------ Mobile menu toggle ------
   const menuBtn = document.getElementById('mobile-menu-btn');
   const mobileMenu = document.getElementById('mobile-menu');
 
@@ -177,8 +235,18 @@ const navLinks = [
     });
   }
 
-  // Initial and reactive wishlist sync
+  // Sign out button
+  document.getElementById('nav-signout-btn')?.addEventListener('click', handleSignOut);
+
+  // Initial sync
   updateNavWishlist();
+  updateNavAuth();
+
+  // Reactive updates
   window.addEventListener('rarivelle:wishlist-updated', updateNavWishlist);
-  document.addEventListener('astro:page-load', updateNavWishlist);
+  window.addEventListener('rarivelle:auth-updated', updateNavAuth);
+  document.addEventListener('astro:page-load', () => {
+    updateNavWishlist();
+    updateNavAuth();
+  });
 </script>

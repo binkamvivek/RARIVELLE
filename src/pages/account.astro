@@ -27,18 +27,13 @@ import Layout from '../layouts/Layout.astro';
 
           <div class="space-y-1.5">
             <div class="flex items-center gap-2.5">
-              <span class="text-[10px] uppercase tracking-[0.25em] text-gold-400 font-semibold">
-                Tier-1 Authenticated Member
-              </span>
-              <span class="px-2 py-0.5 text-[9px] uppercase tracking-wider bg-gold-500/10 text-gold-300 border border-gold-500/20">
-                Institutional Escrow Cleared
-              </span>
+              <span class="text-[10px] uppercase tracking-[0.25em] text-gold-400 font-semibold block mb-1">Collector</span>
             </div>
-            <h1 class="font-serif text-2xl sm:text-3xl text-ivory-100 font-light">
-              Geneva Private Trust & Collection
+            <h1 id="account-user-name" class="font-serif text-2xl sm:text-3xl text-ivory-100 font-light">
+              Welcome
             </h1>
-            <p class="text-xs text-noir-400">
-              ID: RV-8849-CH · Member since November 2021 · Geneva & London Enclaves
+            <p id="account-user-email" class="text-xs text-noir-400">
+              Member of RARIVELLE
             </p>
           </div>
         </div>
@@ -57,6 +52,13 @@ import Layout from '../layouts/Layout.astro';
           >
             Saved Folio
           </a>
+          <button
+            id="account-signout-btn"
+            type="button"
+            class="px-5 py-3 bg-transparent border border-noir-700 hover:border-red-500/50 text-noir-400 hover:text-red-400 text-xs uppercase tracking-widest font-medium transition-all"
+          >
+            Sign Out
+          </button>
         </div>
       </div>
 
@@ -145,13 +147,37 @@ import Layout from '../layouts/Layout.astro';
 
   </div>
 
-  <!-- Client-side script to load user's custom listings -->
+  <!-- Client-side script to load user's custom listings + auth gate -->
   <script is:inline>
     (function() {
-      const grid = document.getElementById('user-listings-grid');
-      const emptyState = document.getElementById('no-user-listings');
-      const countEl = document.getElementById('account-listings-count');
-      const valEl = document.getElementById('account-valuation');
+      // --- Auth Gate ---
+      var rawUser = localStorage.getItem('rarivelle_user');
+      var user = null;
+      try { user = rawUser ? JSON.parse(rawUser) : null; } catch(e) {}
+
+      if (!user) {
+        window.location.href = '/login';
+        return;
+      }
+
+      // Populate user info
+      var nameEl = document.getElementById('account-user-name');
+      var emailEl = document.getElementById('account-user-email');
+      if (nameEl) nameEl.textContent = user.name || 'Collector';
+      if (emailEl) emailEl.textContent = user.email || '';
+
+      // Sign out
+      document.getElementById('account-signout-btn')?.addEventListener('click', function() {
+        localStorage.removeItem('rarivelle_user');
+        window.dispatchEvent(new CustomEvent('rarivelle:auth-updated'));
+        window.location.href = '/';
+      });
+
+      // --- Listings ---
+      var grid = document.getElementById('user-listings-grid');
+      var emptyState = document.getElementById('no-user-listings');
+      var countEl = document.getElementById('account-listings-count');
+      var valEl = document.getElementById('account-valuation');
 
       function formatUSD(amount) {
         return new Intl.NumberFormat('en-US', {
@@ -162,9 +188,9 @@ import Layout from '../layouts/Layout.astro';
       }
 
       function loadListings() {
-        let list = [];
+        var list = [];
         try {
-          const raw = localStorage.getItem('rarivelle_custom_listings');
+          var raw = localStorage.getItem('rarivelle_custom_listings');
           if (raw) list = JSON.parse(raw);
         } catch (e) {
           list = [];
@@ -181,65 +207,43 @@ import Layout from '../layouts/Layout.astro';
 
         if (emptyState) emptyState.classList.add('hidden');
 
-        const total = list.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+        var total = list.reduce(function(acc, item) { return acc + (Number(item.price) || 0); }, 0);
         if (valEl) valEl.textContent = formatUSD(total);
 
         if (grid) {
-          grid.innerHTML = list.map((item, idx) => {
-            const img = (item.images && item.images[0]) ? item.images[0] : 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
-            return `
-              <div class="bg-noir-900 border border-noir-800 hover:border-gold-500/50 transition-all flex flex-col justify-between overflow-hidden">
-                <div class="relative aspect-4/3 w-full bg-noir-950 overflow-hidden">
-                  <img src="${img}" alt="${item.title}" class="w-full h-full object-cover" />
-                  <span class="absolute top-3 left-3 px-2 py-0.5 text-[9px] uppercase tracking-widest bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 font-semibold backdrop-blur-sm">
-                    Active in Salon
-                  </span>
-                  <button 
-                    type="button" 
-                    data-delete-custom="${idx}" 
-                    class="absolute top-3 right-3 p-1.5 bg-noir-950/80 text-noir-400 hover:text-red-400 border border-white/10 rounded-full cursor-pointer"
-                    title="Delist Piece"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div class="p-5 flex flex-col flex-1 justify-between space-y-4">
-                  <div>
-                    <div class="text-[10px] text-gold-400 uppercase tracking-widest mb-1">
-                      ${item.category} · Circa ${item.year || 'Historic'}
-                    </div>
-                    <h3 class="font-serif text-base text-ivory-100 line-clamp-2">
-                      <a href="/product/${item.id}">${item.title}</a>
-                    </h3>
-                    <div class="text-xs text-noir-400 mt-1">
-                      Vault: ${item.location || 'Your Custody'}
-                    </div>
-                  </div>
-
-                  <div class="pt-4 border-t border-noir-800 flex items-center justify-between">
-                    <div>
-                      <span class="block text-[9px] uppercase tracking-widest text-noir-400">Listed Price</span>
-                      <span class="font-serif text-lg text-gold-300 font-light">${formatUSD(item.price)}</span>
-                    </div>
-                    <a 
-                      href="/product/${item.id}" 
-                      class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors"
-                    >
-                      View Live Dossier &rarr;
-                    </a>
-                  </div>
-                </div>
-              </div>
-            `;
+          grid.innerHTML = list.map(function(item, idx) {
+            var img = (item.images && item.images[0]) ? item.images[0] : 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+            return [
+              '<div class="bg-noir-900 border border-noir-800 hover:border-gold-500/50 transition-all flex flex-col justify-between overflow-hidden">',
+                '<div class="relative aspect-4/3 w-full bg-noir-950 overflow-hidden">',
+                  '<img src="' + img + '" alt="' + item.title + '" class="w-full h-full object-cover" />',
+                  '<span class="absolute top-3 left-3 px-2 py-0.5 text-[9px] uppercase tracking-widest bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 font-semibold backdrop-blur-sm">Active in Salon</span>',
+                  '<button type="button" data-delete-custom="' + idx + '" class="absolute top-3 right-3 p-1.5 bg-noir-950/80 text-noir-400 hover:text-red-400 border border-white/10 rounded-full cursor-pointer" title="Delist Piece">',
+                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>',
+                  '</button>',
+                '</div>',
+                '<div class="p-5 flex flex-col flex-1 justify-between space-y-4">',
+                  '<div>',
+                    '<div class="text-[10px] text-gold-400 uppercase tracking-widest mb-1">' + item.category + ' · Circa ' + (item.year || 'Historic') + '</div>',
+                    '<h3 class="font-serif text-base text-ivory-100 line-clamp-2"><a href="/product/' + item.id + '">' + item.title + '</a></h3>',
+                    '<div class="text-xs text-noir-400 mt-1">Vault: ' + (item.location || 'Your Custody') + '</div>',
+                  '</div>',
+                  '<div class="pt-4 border-t border-noir-800 flex items-center justify-between">',
+                    '<div>',
+                      '<span class="block text-[9px] uppercase tracking-widest text-noir-400">Listed Price</span>',
+                      '<span class="font-serif text-lg text-gold-300 font-light">' + formatUSD(item.price) + '</span>',
+                    '</div>',
+                    '<a href="/product/' + item.id + '" class="px-3 py-1 bg-noir-950 border border-gold-500/40 text-gold-300 hover:bg-gold-500 hover:text-noir-950 text-[10px] uppercase tracking-widest font-semibold transition-colors">View Live Dossier &rarr;</a>',
+                  '</div>',
+                '</div>',
+              '</div>'
+            ].join('');
           }).join('');
 
           // Attach delete listener
-          grid.querySelectorAll('[data-delete-custom]').forEach(btn => {
-            btn.addEventListener('click', () => {
-              const idx = Number(btn.getAttribute('data-delete-custom'));
+          grid.querySelectorAll('[data-delete-custom]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var idx = Number(btn.getAttribute('data-delete-custom'));
               if (confirm('Are you sure you wish to withdraw this piece from the salon?')) {
                 list.splice(idx, 1);
                 localStorage.setItem('rarivelle_custom_listings', JSON.stringify(list));
